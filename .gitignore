@@ -1,0 +1,9 @@
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+*.rkllm
+*.rknn
+*.gguf
+bench_results.jsonl
