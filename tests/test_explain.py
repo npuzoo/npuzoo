@@ -119,3 +119,18 @@ def test_mismatch_direction_is_identified_not_just_mismatch():
     newer_model = ids("E rkllm: The rkllm-runtime version is lower than the rkllm-toolkit version. Please update rkllm-runtime to 1.3.0 or higher.\n")
     older_model = ids("W rkllm: The model version is too old, please use the latest toolkit to reconvert the model\n")
     assert newer_model != older_model
+
+
+def test_closed_pipe_is_not_an_error(tmp_path, monkeypatch):
+    """`npuzoo explain big.log | head` must not print a traceback."""
+    import io, sys as _s
+    from npuzoo.cli import main
+
+    class ClosedPipe(io.StringIO):
+        def write(self, s):
+            raise BrokenPipeError(32, "Broken pipe")
+
+    log = tmp_path / "x.log"
+    log.write_text("E rkllm: Failed to allocate buffer for kv cache\n")
+    monkeypatch.setattr(_s, "stdout", ClosedPipe())
+    assert main(["explain", str(log)]) == 0

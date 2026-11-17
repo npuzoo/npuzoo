@@ -38,6 +38,20 @@ HEADER = '''#!/usr/bin/env python3
 FOOTER = '''
 
 def _main(argv):
+    # people pipe this into head/less; a closed pipe is not an error
+    try:
+        return _run(argv)
+    except BrokenPipeError:
+        try:
+            sys.stdout.close()
+        except Exception:
+            pass
+        return 0
+    except KeyboardInterrupt:
+        return 130
+
+
+def _run(argv):
     argv = list(argv)
     if "--help" in argv or "-h" in argv:
         print(__doc__ or "")

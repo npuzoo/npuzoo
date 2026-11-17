@@ -6,6 +6,20 @@ from . import __version__
 
 
 def main(argv=None):
+    # people pipe this into head/less; a closed pipe is not an error
+    try:
+        return _main(argv)
+    except BrokenPipeError:
+        try:
+            sys.stdout.close()
+        except Exception:
+            pass
+        return 0
+    except KeyboardInterrupt:
+        return 130
+
+
+def _main(argv=None):
     p = argparse.ArgumentParser(
         prog="npuzoo",
         description="Run AI models on NPU single-board computers. One command.",
