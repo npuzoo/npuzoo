@@ -11,10 +11,9 @@
 
 ```
 $ npuzoo doctor           # 体检：板子、内核、NPU 驱动、运行时库，有问题直接给修法
-$ npuzoo doctor --pc      # 体检用来转换模型的 x86 电脑：工具版本、Python、依赖、内存够不够
 $ npuzoo explain err.log  # 贴一段 RKLLM/RKNN 报错日志，告诉你真正的原因
 $ npuzoo inspect m.rkllm  # 拷到板子之前：这真的是模型吗？芯片对吗？运行时版本对吗？
-$ npuzoo find qwen3 1.7b  # 搜别人转好的 .rkllm 模型，只显示你这块板子、这个运行时能用的
+$ npuzoo find qwen3 1.7b  # 搜别人转好的 .rkllm 模型（Hugging Face 和魔搭），只显示你这块板子、这个运行时能用的
 $ npuzoo support qwen3    # 这个模型从 RKLLM 哪个版本开始支持（工具和运行时都要这个版本以上）
 $ npuzoo pull qwen3-1.7b  # 下载为你的板子、你的运行时转换并验证过的模型包（制作中）
 $ npuzoo run m.rkllm      # 在 NPU 上对话，结束后显示运行时自己统计的预填充、生成速度

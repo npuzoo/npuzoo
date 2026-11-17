@@ -13,10 +13,9 @@ npuzoo packages it.
 
 ```
 $ npuzoo doctor           # board, kernel, NPU driver, runtime libs — and how to fix them
-$ npuzoo doctor --pc      # the x86 PC you convert models on: toolkit, Python, pins, memory
 $ npuzoo explain err.log  # paste a failing RKLLM/RKNN log, get the actual cause
 $ npuzoo inspect m.rkllm  # before copying: is it really a model, for this chip, for this runtime?
-$ npuzoo find qwen3 1.7b  # community .rkllm files on Hugging Face that fit YOUR board and runtime
+$ npuzoo find qwen3 1.7b  # community .rkllm files (Hugging Face, ModelScope) that fit YOUR board and runtime
 $ npuzoo support qwen3    # which RKLLM release added it (toolkit AND runtime), from Rockchip's changelog
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
 $ npuzoo run m.rkllm      # chat on the NPU; prints prefill/generate tok/s from the runtime itself
@@ -133,6 +132,7 @@ without a source.
 | standalone one-file doctor | v0.1 — works now; includes `--explain`, `--inspect` and `--pc` |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
 | `npuzoo run` / `serve` / `bench` (RKLLM runtime 1.2.1–1.3.1) | v0.2 — written against Rockchip's headers; every struct size and offset checked in CI for aarch64 (`tools/check_rkllm_abi.py`); `serve` speaks the OpenAI and Ollama APIs with tool calls ([Home Assistant, Open WebUI](docs/home-assistant.md)); **not yet run on a board** |
+| `npuzoo convert` (x86 PC, rkllm-toolkit) | v0.2 — the matrix's conversion path as one command; stops early when the toolkit predates the model family or memory will run out; failed logs go through `explain` |
 | conversion matrix (x86, no board) | runs in GitHub Actions: six models × toolkit 1.1.4 / 1.2.3 / 1.3.1 × RK3588 / RK3576 formats → [docs/conversion-matrix.md](docs/conversion-matrix.md) |
 | voice pipeline preset | planned |
 
