@@ -2,6 +2,8 @@
 
 **Run AI models on your NPU board. One command.**
 
+English · [中文](README.zh.md)
+
 `npuzoo` is a CLI + model registry for single-board computers with NPUs —
 starting with Rockchip RK3588 / RK3576 (Orange Pi 5 series, Radxa Rock 5,
 NanoPC-T6, …).
@@ -122,7 +124,7 @@ without a source.
 | `npuzoo inspect` (model file → can it load?) | v0.1 — LFS pointers, error pages, GGUF, third-party `.rkllm`, wrong chip or format, version order, checksum. See [docs/rkllm-format.md](docs/rkllm-format.md) |
 | `npuzoo find` / `npuzoo get` (community files) | v0.1 — weekly index of every public `.rkllm` on Hugging Face; fit judged from names, downloads verified |
 | runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
-| standalone one-file doctor | v0.1 — works now; includes `--explain` and `--inspect` |
+| standalone one-file doctor | v0.1 — works now; includes `--explain`, `--inspect` and `--pc` |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
 | `npuzoo run` (RKLLM backend) | stub — lands with the first model batch |
 | conversion pipeline (x86) | skeleton in `pipeline/` |
@@ -139,7 +141,7 @@ see Community.
 pipx install .           # or: pip install -e .
 npuzoo doctor            # on a real board
 npuzoo doctor --demo     # anywhere, with simulated board data
-python -m pytest tests   # 55 tests, no hardware needed
+python -m pytest tests   # no hardware needed
 ```
 
 ## Supported boards (initial)
@@ -161,7 +163,8 @@ whole contract.
 ## Community
 
 Run the one-liner above on your board and paste the output — **especially when
-something is broken**. Every failure mode we see makes the tool better for the
+something is broken**. There are issue forms for
+[board reports and failing logs](https://github.com/npuzoo/npuzoo/issues/new/choose). Every failure mode we see makes the tool better for the
 next person, and right now that is the single most useful thing anyone can
 contribute.
 

@@ -1,0 +1,38 @@
+name: Board report / 板子体检结果
+description: Paste what `npuzoo doctor` says about your board — working or not. 贴上 npuzoo doctor 的输出，能用不能用都欢迎。
+title: "[board] "
+labels: ["board-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every board report calibrates the checks for the next person. Nothing here is collected automatically.
+        每一份体检结果都会让检查规则对下一个人更准。我们不会自动收集任何数据。
+
+        `curl -fsSL https://raw.githubusercontent.com/npuzoo/npuzoo/main/standalone/npuzoo-doctor.py | sudo python3`
+  - type: input
+    id: board
+    attributes:
+      label: Board / 板子型号
+      placeholder: Orange Pi 5 Plus 16GB
+    validations:
+      required: true
+  - type: input
+    id: image
+    attributes:
+      label: OS image / 系统镜像
+      description: Vendor image or Armbian, with version. 厂商镜像还是 Armbian，带版本号。
+      placeholder: Armbian 25.11 vendor kernel 6.1
+  - type: textarea
+    id: doctor
+    attributes:
+      label: npuzoo doctor output / 体检输出
+      description: Run it with sudo so the driver version is readable. 用 sudo 运行才能读到驱动版本。
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What works, what does not / 哪些能用，哪些不能用
+      description: Models you ran, tokens/s if you measured, anything doctor got wrong. 跑过的模型、测到的速度、体检判断错的地方。

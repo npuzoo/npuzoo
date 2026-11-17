@@ -1,0 +1,45 @@
+name: A log npuzoo could not explain / npuzoo 解释不了的报错日志
+description: A conversion or runtime log where `npuzoo explain` found nothing, or the wrong thing. 转换或运行的报错，npuzoo explain 没认出来或者认错了。
+title: "[log] "
+labels: ["failure-signature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Unmatched logs are how the failure list grows. Remove anything private (paths, tokens) before pasting.
+        没认出来的日志正是故障库增长的来源。贴之前请删掉隐私信息（路径、令牌等）。
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it fail / 在哪里失败
+      options:
+        - Converting on the PC (rkllm-toolkit) / 在电脑上转换
+        - Loading or running on the board (librkllmrt) / 在板子上加载或运行
+        - Vision / audio part (RKNN) / 视觉或语音部分（RKNN）
+        - Not sure / 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: The log / 日志
+      description: The whole log if you can, not just the last line. 尽量贴完整日志，不要只贴最后一行。
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: explain
+    attributes:
+      label: What npuzoo explain said / npuzoo explain 的输出
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions / 版本
+      description: Toolkit, runtime, driver, model. 转换工具、运行时、驱动、模型。
+      placeholder: toolkit 1.2.3, runtime 1.2.3, driver 0.9.8, Qwen3-1.7B w8a8 RK3588
+  - type: textarea
+    id: doctor
+    attributes:
+      label: npuzoo doctor (or doctor --pc) output / 体检输出
+      render: text
