@@ -43,6 +43,7 @@ docs/
   compatibility.md  版本配对规则和四种出错方式
   fixes.md          每条已知故障的修法
   rkllm-format.md   .rkllm 文件头能读什么、故意不破解什么、inspect 查什么
+  next-chips.md     第二阶段候选芯片（爱芯、此芯、后摩）：工具链、运行时、许可、拿 SDK 的方式、npuzoo 要做什么
   licensing.md      瑞芯微两套 SDK 的许可条款读下来的结论：能发什么、不能发什么
   outreach/first-post.md  论坛/Reddit 首发帖草稿和回帖守则
 ```
