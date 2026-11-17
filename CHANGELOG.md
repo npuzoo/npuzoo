@@ -29,6 +29,10 @@ Everything here works without a board except where it says otherwise.
   answer — see `docs/home-assistant.md`), and a fixed benchmark, through a ctypes binding to librkllmrt for
   runtimes 1.2.1–1.3.1. Struct layouts are checked against Rockchip's headers
   for aarch64 in CI. **Not yet run on a board.**
+- Shared benchmark reports: a maintainer labels a benchmark issue
+  `bench-accepted` and a workflow adds it to `bench/results.json` and
+  `docs/benchmarks.md` — raw rows, unranked, with the clock governors beside
+  each.
 - `explain` — 25 failure signatures, including two toolkit install failures
   found by the conversion matrix.
 - Conversion matrix — rkllm-toolkit releases × models × chip formats,

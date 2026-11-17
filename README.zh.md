@@ -19,7 +19,7 @@ $ npuzoo support qwen3    # 这个模型从 RKLLM 哪个版本开始支持（工
 $ npuzoo pull qwen3-1.7b  # 下载为你的板子、你的运行时转换并验证过的模型包（制作中）
 $ npuzoo run m.rkllm      # 在 NPU 上对话，结束后显示运行时自己统计的预填充、生成速度
 $ npuzoo serve m.rkllm    # 提供 OpenAI 和 Ollama 兼容接口（:8080），Home Assistant、Open WebUI 等可直接接入
-$ npuzoo bench m.rkllm    # 每块板子都跑同样两组测试，生成可以分享的测速 JSON
+$ npuzoo bench m.rkllm    # 每块板子都跑同样两组测试；分享的结果汇总在 docs/benchmarks.md
 
 # 在负责转换模型的 x86 电脑上：
 $ npuzoo doctor --pc                                  # 检查转换工具、Python、依赖版本、内存

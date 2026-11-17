@@ -1,0 +1,57 @@
+name: benchmark results
+
+# A maintainer labels a benchmark issue `bench-accepted` after reading it;
+# this adds the report to bench/results.json and docs/benchmarks.md and
+# says so on the issue. The issue body reaches the script only through an
+# environment variable, never through the shell.
+
+on:
+  issues:
+    types: [labeled]
+
+concurrency:
+  group: bench-results
+  cancel-in-progress: false
+
+jobs:
+  add:
+    if: github.event.label.name == 'bench-accepted'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: add the report
+        id: add
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          if python3 tools/collect_bench.py --issue-body-env ISSUE_BODY --source "$ISSUE_URL" 2> refused.txt; then
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=0" >> "$GITHUB_OUTPUT"
+            cat refused.txt
+          fi
+      - name: commit
+        if: steps.add.outputs.ok == '1'
+        run: |
+          git add bench/results.json docs/benchmarks.md
+          if git diff --cached --quiet; then echo "unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add benchmark report from #${{ github.event.issue.number }}"
+          git pull -q --rebase origin main
+          git push
+      - name: tell the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ "${{ steps.add.outputs.ok }}" = "1" ]; then
+            gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body "Added to [docs/benchmarks.md](../blob/main/docs/benchmarks.md). Thank you!"
+          else
+            { echo "Could not add this report:"; echo; echo '```'; cat refused.txt; echo '```'; } > msg.md
+            gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file msg.md
+          fi
