@@ -2,8 +2,10 @@
 
 run prints the runtime's own prefill and generate rates after each answer,
 so every run is also an honest measurement. serve speaks the OpenAI chat
-API (/v1/chat/completions, streaming or not; /v1/models), so Home Assistant,
-Open WebUI and the openai client libraries can use the board directly.
+API (/v1/chat/completions, streaming or not; /v1/models) and the Ollama API
+(/api/chat, /api/generate, /api/tags, /api/show, /api/version), so Home
+Assistant's Ollama integration, Open WebUI and the openai client libraries
+can use the board directly.
 
 Both check the file with `npuzoo inspect` against the board's chip and
 runtime before loading it: a mismatch is refused with the reason instead of
@@ -200,6 +202,40 @@ def _chunk(cid, model, created, delta, finish=None):
             "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
 
 
+OLLAMA_VERSION = "0.6.0"       # the Ollama API level these endpoints follow; clients check it
+
+
+def _now():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def ollama_model_entry(model_name, meta=None):
+    meta = meta or {}
+    path = meta.get("model") or ""
+    size = os.path.getsize(path) if path and os.path.exists(path) else 0
+    from .inspect import parse_name
+    from .models import family_for_name
+    claims = parse_name(path or model_name)
+    fam = family_for_name(model_name) or family_for_name(path)
+    return {
+        "name": model_name, "model": model_name, "modified_at": _now(), "size": size, "digest": "",
+        "details": {"format": "rkllm", "family": fam["key"] if fam else "", "families": None,
+                    "parameter_size": "", "quantization_level": claims.get("dtype") or ""},
+    }
+
+
+def ollama_stats(res, limit):
+    """Ollama's closing counters, from the runtime's own (durations in nanoseconds)."""
+    perf = (res or {}).get("perf") or {}
+    pre_ms, gen_ms = perf.get("prefill_ms") or 0.0, perf.get("generate_ms") or 0.0
+    return {
+        "done_reason": _finish(res or {}, limit),
+        "total_duration": int((pre_ms + gen_ms) * 1e6), "load_duration": 0,
+        "prompt_eval_count": perf.get("prefill_tokens", 0), "prompt_eval_duration": int(pre_ms * 1e6),
+        "eval_count": perf.get("generate_tokens", 0), "eval_duration": int(gen_ms * 1e6),
+    }
+
+
 def make_handler(session, model_name, lock, conversation, max_new_tokens, meta=None):
     from http.server import BaseHTTPRequestHandler
 
@@ -223,16 +259,99 @@ def make_handler(session, model_name, lock, conversation, max_new_tokens, meta=N
         def _error(self, code, message, kind="invalid_request_error"):
             self._json(code, {"error": {"message": message, "type": kind}})
 
+        def _ollama(self, path):
+            """Ollama's /api/chat and /api/generate: streams NDJSON by default, like Ollama."""
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+                req = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+                if path == "/api/chat":
+                    plan = conversation.plan(req.get("messages") or [])
+                else:
+                    if not (req.get("prompt") or "").strip():
+                        # Ollama answers an empty generate request by (pre)loading the model
+                        return self._json(200, {"model": model_name, "created_at": _now(), "response": "",
+                                                "done": True, "done_reason": "load"})
+                    plan = {"reset": True, "role": "user", "prompt": req["prompt"], "after": None}
+            except (ValueError, TypeError) as e:
+                return self._json(400, {"error": str(e)})
+            stream = req.get("stream", True)
+            opts = req.get("options") or {}
+            limit = opts.get("num_predict") if isinstance(opts.get("num_predict"), int) and opts["num_predict"] > 0 else None
+            chat = path == "/api/chat"
+
+            def piece(text, done=False, res=None):
+                obj = {"model": model_name, "created_at": _now(), "done": done}
+                if chat:
+                    obj["message"] = {"role": "assistant", "content": text}
+                else:
+                    obj["response"] = text
+                if done:
+                    obj.update(ollama_stats(res, limit or max_new_tokens))
+                return obj
+
+            with lock:
+                if plan["reset"]:
+                    session.clear_history(keep_system_prompt=False)
+                    conversation.forget()
+                if stream:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/x-ndjson")
+                    self.send_header("Connection", "close")
+                    self.end_headers()
+                    self.close_connection = True
+
+                    def send(obj):
+                        self.wfile.write((json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8"))
+                        self.wfile.flush()
+                    try:
+                        res = session.generate(plan["prompt"], role=plan["role"], keep_history=chat,
+                                               max_new_tokens=limit, on_text=lambda t: send(piece(t)))
+                    except RuntimeError_ as e:
+                        send({"error": str(e)})
+                        return
+                    if chat:
+                        conversation.answered(plan["after"], res["text"])
+                    send(piece("", True, res))
+                    return
+                try:
+                    res = session.generate(plan["prompt"], role=plan["role"], keep_history=chat, max_new_tokens=limit)
+                except RuntimeError_ as e:
+                    return self._json(500, {"error": str(e)})
+                if chat:
+                    conversation.answered(plan["after"], res["text"])
+            self._json(200, piece(res["text"], True, res))
+
         def do_GET(self):
+            path = self.path.split("?")[0].rstrip("/")
+            if path == "/api/version":
+                return self._json(200, {"version": OLLAMA_VERSION})
+            if path == "/api/tags":
+                return self._json(200, {"models": [ollama_model_entry(model_name, meta)]})
+            if path == "/api/ps":
+                return self._json(200, {"models": [dict(ollama_model_entry(model_name, meta), size_vram=0)]})
             if self.path.rstrip("/") in ("/v1/models", "/models"):
                 self._json(200, {"object": "list", "data": [
                     {"id": model_name, "object": "model", "created": 0, "owned_by": "npuzoo"}]})
-            elif self.path.rstrip("/") in ("", "/health"):
+            elif self.path.rstrip("/") == "":
+                body = b"npuzoo is running (OpenAI and Ollama APIs)"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            elif self.path.rstrip("/") == "/health":
                 self._json(200, {"status": "ok", "model": model_name, "runtime": (meta or {}).get("runtime")})
             else:
                 self._error(404, "unknown path %s" % self.path)
 
         def do_POST(self):
+            path = self.path.split("?")[0].rstrip("/")
+            if path in ("/api/chat", "/api/generate"):
+                return self._ollama(path)
+            if path == "/api/show":
+                entry = ollama_model_entry(model_name, meta)
+                return self._json(200, {"modelfile": "", "parameters": "", "template": "",
+                                        "details": entry["details"], "model_info": {}})
             if self.path.rstrip("/") not in ("/v1/chat/completions", "/chat/completions"):
                 return self._error(404, "unknown path %s" % self.path)
             try:
@@ -312,7 +431,8 @@ def cmd_serve(model, host="0.0.0.0", port=8080, lib_path=None, force=False, cont
     model_name = name or os.path.splitext(os.path.basename(meta["model"]))[0]
     handler = make_handler(session, model_name, threading.Lock(), Conversation(), max_new_tokens, meta)
     httpd = ThreadingHTTPServer((host, port), handler)
-    print("Serving %s at http://%s:%d/v1  (OpenAI chat API; Ctrl-C stops)" % (model_name, host, port))
+    print("Serving %s at http://%s:%d  (OpenAI API under /v1, Ollama API under /api; Ctrl-C stops)"
+          % (model_name, host, port))
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -16,8 +16,9 @@ Everything here works without a board except where it says otherwise.
   from Rockchip's changelog. `inspect`, `find` and `explain` use the same table.
 - `npuzoo doctor --pc` — the x86 machine that converts models: toolkit,
   Python, dependency pins, `pkg_resources`, pyarrow, memory.
-- `npuzoo run`, `npuzoo serve`, `npuzoo bench` — chat, an OpenAI-compatible
-  server, and a fixed benchmark, through a ctypes binding to librkllmrt for
+- `npuzoo run`, `npuzoo serve`, `npuzoo bench` — chat, a server that speaks
+  both the OpenAI and the Ollama API (so Home Assistant's Ollama integration
+  and Open WebUI connect as they would to Ollama), and a fixed benchmark, through a ctypes binding to librkllmrt for
   runtimes 1.2.1–1.3.1. Struct layouts are checked against Rockchip's headers
   for aarch64 in CI. **Not yet run on a board.**
 - `explain` — 25 failure signatures, including two toolkit install failures

@@ -202,3 +202,49 @@ def test_bad_requests(server):
     with pytest.raises(urllib.error.HTTPError) as e:
         post(base + "/v1/completions", {"prompt": "x"})
     assert e.value.code == 404
+
+
+# ------------------------------------------------------------ Ollama API (Home Assistant, Open WebUI)
+
+def test_ollama_version_tags_show(server):
+    base, _ = server
+    with urllib.request.urlopen(base + "/api/version", timeout=10) as r:
+        assert json.load(r)["version"]
+    with urllib.request.urlopen(base + "/api/tags", timeout=10) as r:
+        m = json.load(r)["models"][0]
+        assert m["name"] == "qwen3-test" and m["details"]["format"] == "rkllm"
+    code, _, body = post(base + "/api/show", {"model": "qwen3-test"})
+    assert code == 200 and "details" in json.loads(body)
+    with urllib.request.urlopen(base + "/", timeout=10) as r:
+        assert b"running" in r.read()
+
+
+def test_ollama_chat_streams_ndjson_by_default(server):
+    base, lib = server
+    code, headers, body = post(base + "/api/chat", {"model": "qwen3-test",
+                                                   "messages": [{"role": "user", "content": "Hi"}]})
+    lines = [json.loads(l) for l in body.splitlines() if l.strip()]
+    assert headers["Content-Type"] == "application/x-ndjson"
+    assert "".join(l["message"]["content"] for l in lines) == "Hello"
+    last = lines[-1]
+    assert last["done"] and last["done_reason"] == "stop"
+    assert last["prompt_eval_count"] == 50 and last["eval_count"] == 12 and last["eval_duration"] == 1000 * 10**6
+
+
+def test_ollama_chat_without_stream_and_options(server):
+    base, lib = server
+    code, _, body = post(base + "/api/chat", {"stream": False, "options": {"num_predict": 12},
+                                             "messages": [{"role": "user", "content": "Hi"}]})
+    out = json.loads(body)
+    assert out["message"]["content"] == "Hello" and out["done_reason"] == "length"
+    assert lib.calls[-1][-1] == 12
+
+
+def test_ollama_generate(server):
+    base, lib = server
+    code, _, body = post(base + "/api/generate", {"prompt": "Say hi", "stream": False})
+    out = json.loads(body)
+    assert out["response"] == "Hello" and out["done"]
+    assert lib.calls[-1][1] == "Say hi" and lib.calls[-1][3] == 0       # no kept history for generate
+    code, _, body = post(base + "/api/generate", {"model": "qwen3-test"})
+    assert json.loads(body)["done_reason"] == "load"

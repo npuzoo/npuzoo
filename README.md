@@ -20,7 +20,7 @@ $ npuzoo find qwen3 1.7b  # community .rkllm files on Hugging Face that fit YOUR
 $ npuzoo support qwen3    # which RKLLM release added it (toolkit AND runtime), from Rockchip's changelog
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
 $ npuzoo run m.rkllm      # chat on the NPU; prints prefill/generate tok/s from the runtime itself
-$ npuzoo serve m.rkllm    # OpenAI chat API on :8080 — Home Assistant, Open WebUI, openai clients
+$ npuzoo serve m.rkllm    # OpenAI and Ollama APIs on :8080 — Home Assistant, Open WebUI, openai clients
 $ npuzoo bench m.rkllm    # the same two workloads on every board; writes a JSON worth sharing
 ```
 
