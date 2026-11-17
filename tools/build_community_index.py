@@ -152,7 +152,7 @@ def files_from_detail(model, detail):
 
 MS_ENDPOINT = os.environ.get("MODELSCOPE_ENDPOINT", "https://www.modelscope.cn").rstrip("/")
 MS_TERMS = ["rkllm", "rk3588", "rk3576", "rk3562", "rv1126", "rknn", "rockchip", "npu"]
-MS_PAGE = 100
+MS_PAGE = 50          # the OpenAPI refuses larger pages (modelscope_hub caps at 50)
 
 
 def _unwrap(payload):
@@ -238,9 +238,23 @@ def ms_entries(item, files):
     } for path, size, sha in files]
 
 
+_ms_errors = []
+
+
 def _ms_get(url):
-    data, _ = _get(url)
-    return data
+    """A ModelScope GET that logs and skips a refused request instead of ending the run."""
+    try:
+        data, _ = _get(url)
+        return data
+    except urllib.error.HTTPError as e:
+        if len(_ms_errors) < 5:
+            try:
+                body = e.read().decode("utf-8", "replace")[:300]
+            except Exception:
+                body = ""
+            print("  modelscope %s on %s: %s" % (e.code, url[:120], body), file=sys.stderr)
+        _ms_errors.append(e.code)
+        return None
 
 
 def build_modelscope(sleep=0.25):

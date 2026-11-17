@@ -129,3 +129,8 @@ def test_modelscope_failure_keeps_huggingface(monkeypatch):
     monkeypatch.setattr(bci, "build_modelscope", boom)
     idx = bci.build(sleep=0)
     assert idx["sources"] == {"huggingface": 0, "modelscope": 0}
+
+
+
+def test_modelscope_page_size_is_within_the_api_limit():
+    assert bci.MS_PAGE <= 50
