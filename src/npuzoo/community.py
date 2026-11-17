@@ -39,6 +39,17 @@ def _endpoint():
     return os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
 
 
+def _ms_endpoint():
+    return os.environ.get("MODELSCOPE_ENDPOINT", "https://www.modelscope.cn").rstrip("/")
+
+
+SOURCES = {"huggingface": "Hugging Face", "modelscope": "ModelScope"}
+
+
+def source_of(entry):
+    return entry.get("source") or "huggingface"
+
+
 # ---------------------------------------------------------------- index
 
 def load_index(src=None, refresh=False, now=None):
@@ -129,10 +140,12 @@ def _matches(entry, terms):
     return all(t in hay for t in terms)
 
 
-def search(index, query="", board=None, runtime=None):
+def search(index, query="", board=None, runtime=None, source=None):
     terms = [t.lower() for t in (query or "").split()]
     rows = []
     for e in index.get("files", []):
+        if source and source_of(e) != source:
+            continue
         if terms and not _matches(e, terms):
             continue
         verdict, reasons = judge(e, board, runtime)
@@ -161,7 +174,7 @@ def _gb(n):
 
 
 def cmd_find(query="", board=None, runtime=None, index_src=None, show_all=False,
-             limit=20, as_json=False, refresh=False):
+             limit=20, as_json=False, refresh=False, source=None):
     if board is None and runtime is None:
         board, runtime = _target()
     try:
@@ -170,7 +183,7 @@ def cmd_find(query="", board=None, runtime=None, index_src=None, show_all=False,
         print("✗ Could not load the community index (%s)." % e)
         print("  It is rebuilt weekly from Hugging Face; try again later, or pass --index PATH.")
         return 2
-    rows = search(index, query, board, runtime)
+    rows = search(index, query, board, runtime, source)
     hidden = [r for r in rows if r["verdict"] == NO] if not show_all else []
     shown = [r for r in rows if show_all or r["verdict"] != NO]
     if as_json:
@@ -189,20 +202,26 @@ def cmd_find(query="", board=None, runtime=None, index_src=None, show_all=False,
         # one block per repo: its best file, and how many more it has
         groups, order = {}, []
         for r in shown:
-            if r["repo"] not in groups:
-                groups[r["repo"]] = []
-                order.append(r["repo"])
-            groups[r["repo"]].append(r)
+            key = (source_of(r), r["repo"])
+            if key not in groups:
+                groups[key] = []
+                order.append(key)
+            groups[key].append(r)
         cap = order[:limit] if limit else order
         for repo in cap:
             r, more = groups[repo][0], len(groups[repo]) - 1
             dl = r.get("downloads")
             print()
-            print("  %s %s" % (MARK[r["verdict"]], repo))
+            src = source_of(r)
+            print("  %s %s%s" % (MARK[r["verdict"]], r["repo"], "   [ModelScope]" if src == "modelscope" else ""))
             print("      %s" % r["path"])
-            print("      %s GB · toolkit %s · updated %s · %s downloads/30d%s" % (
-                _gb(r.get("bytes")), r["claims"]["toolkit"] or "?", r.get("updated") or "?",
-                dl if dl is not None else "?", ("   (+%d more file%s in this repo)" % (more, "s" if more > 1 else "")) if more else ""))
+            if src == "modelscope":
+                pop = "%s downloads in total" % (r.get("downloads_total") if r.get("downloads_total") is not None else "?")
+            else:
+                pop = "%s downloads/30d" % (dl if dl is not None else "?")
+            print("      %s GB · toolkit %s · updated %s · %s%s" % (
+                _gb(r.get("bytes")), r["claims"]["toolkit"] or "?", r.get("updated") or "?", pop,
+                ("   (+%d more file%s in this repo)" % (more, "s" if more > 1 else "")) if more else ""))
         if limit and len(order) > limit:
             print("\n  … %d more repos (--limit 0 shows all)" % (len(order) - limit))
     if hidden:
@@ -210,15 +229,18 @@ def cmd_find(query="", board=None, runtime=None, index_src=None, show_all=False,
     if shown:
         top = shown[0]
         print("\n  ✓ name fits   ? name does not say enough   ✗ will not load")
-        print("  Get one:  npuzoo get %s %s" % (top["repo"], top["path"]))
-    print("\n  Published by their authors on Hugging Face; npuzoo has not tested them.")
+        print("  Get one:  npuzoo get %s%s %s" % ("--source modelscope " if source_of(top) == "modelscope" else "",
+                                               top["repo"], top["path"]))
+    print("\n  Published by their authors on Hugging Face and ModelScope; npuzoo has not tested them.")
     print("  Index of %s, %d files." % ((index.get("generated") or "?")[:10], len(index.get("files", []))))
     return 0 if shown else 1
 
 
 # ---------------------------------------------------------------- get
 
-def resolve_url(repo, path, endpoint=None):
+def resolve_url(repo, path, endpoint=None, source="huggingface"):
+    if source == "modelscope":
+        return "%s/models/%s/resolve/master/%s" % (endpoint or _ms_endpoint(), repo, urllib.parse.quote(path))
     return "%s/%s/resolve/main/%s" % (endpoint or _endpoint(), repo, urllib.parse.quote(path))
 
 
@@ -275,16 +297,20 @@ def download(url, out, expect_bytes=None, expect_sha256=None, progress=True):
     return True, "Size%s match what Hugging Face published." % (" and SHA-256" if expect_sha256 else "")
 
 
-def cmd_get(repo, path, board=None, runtime=None, index_src=None, dest=None, force=False):
+def cmd_get(repo, path, board=None, runtime=None, index_src=None, dest=None, force=False, source=None):
     if board is None and runtime is None:
         board, runtime = _target()
     try:
         index, _ = load_index(index_src)
     except Exception:
         index = {"files": []}
-    entry = next((e for e in index.get("files", []) if e["repo"] == repo and e["path"] == path), None)
+    source = source or os.environ.get("NPUZOO_SOURCE") or None
+    matches = [e for e in index.get("files", []) if e["repo"] == repo and e["path"] == path
+               and (source is None or source_of(e) == source)]
+    matches.sort(key=lambda e: source_of(e) != "huggingface")      # Hugging Face first unless asked
+    entry = matches[0] if matches else None
     if entry is None:
-        entry = {"repo": repo, "path": path}
+        entry = {"repo": repo, "path": path, "source": source or "huggingface"}
         print("! %s/%s is not in the index; it will be downloaded without a checksum to compare." % (repo, path))
 
     verdict, reasons = judge(entry, board, runtime)
@@ -301,7 +327,7 @@ def cmd_get(repo, path, board=None, runtime=None, index_src=None, dest=None, for
     dest = dest or os.path.join(HOME, "community", repo)
     out = os.path.join(dest, path)
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    url = resolve_url(repo, path)
+    url = resolve_url(repo, path, source=source_of(entry))
     if entry.get("license"):
         print("  License: %s (from the model page; you are bound by it)" % entry["license"])
     print("↓ %s" % url)
@@ -311,6 +337,7 @@ def cmd_get(repo, path, board=None, runtime=None, index_src=None, dest=None, for
         print("✗ Download failed: %s" % e)
         if "huggingface.co" in url:
             print("  If huggingface.co is slow or blocked here, try:  HF_ENDPOINT=https://hf-mirror.com npuzoo get ...")
+            print("  or look for the same model on ModelScope:  npuzoo find <name> --source modelscope")
         return 1
     print(("✓ " if ok else "✗ ") + msg)
     if not ok:

@@ -262,3 +262,50 @@ def test_remote_index_falls_back_to_cache(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(community.urllib.request, "urlopen", boom)
     idx, where = community.load_index("https://example.test/i.json")
     assert where == str(cache) and len(idx["files"]) == 5
+
+
+
+# ------------------------------------------------------------ ModelScope entries
+
+MS_INDEX = {"files": [
+    entry("alice/Qwen3-1.7B-rk3588", "Qwen3-1.7B-rk3588-w8a8-1.2.1.rkllm", downloads=900),
+    dict(entry("radxa/Qwen3-1.7B-RKLLM", "rk3588/Qwen3-1.7B-w8a8-rk3588-1.2.1.rkllm"),
+         source="modelscope", downloads=None, downloads_total=3825),
+]}
+
+
+def test_source_filter():
+    assert [r["repo"] for r in search(MS_INDEX, "qwen3", source="modelscope")] == ["radxa/Qwen3-1.7B-RKLLM"]
+    assert len(search(MS_INDEX, "qwen3")) == 2
+
+
+def test_find_labels_modelscope(tmp_path, capsys):
+    p = tmp_path / "i.json"
+    p.write_text(json.dumps(MS_INDEX))
+    cmd_find("qwen3", board="rk3588", runtime="1.2.1", index_src=str(p), source="modelscope")
+    out = capsys.readouterr().out
+    assert "[ModelScope]" in out and "3825 downloads in total" in out
+    assert "npuzoo get --source modelscope radxa/Qwen3-1.7B-RKLLM" in out
+
+
+def test_modelscope_url(monkeypatch):
+    monkeypatch.delenv("MODELSCOPE_ENDPOINT", raising=False)
+    assert community.resolve_url("radxa/m", "rk3588/a b.rkllm", source="modelscope") == \
+        "https://www.modelscope.cn/models/radxa/m/resolve/master/rk3588/a%20b.rkllm"
+
+
+def test_get_from_modelscope(tmp_path, monkeypatch, capsys):
+    data = _payload()
+    idx = {"files": [dict(entry("radxa/m", "m-rk3588-w8a8-1.2.1.rkllm", bytes=len(data),
+                                sha256=hashlib.sha256(data).hexdigest()), source="modelscope")]}
+    p = tmp_path / "idx.json"
+    p.write_text(json.dumps(idx))
+    seen = {}
+
+    def fake_open(url, start=0):
+        seen["url"] = url
+        return FakeResp(data)
+    monkeypatch.setattr(community, "_open", fake_open)
+    rc = cmd_get("radxa/m", "m-rk3588-w8a8-1.2.1.rkllm", board="rk3588", runtime="1.2.1",
+                 index_src=str(p), dest=str(tmp_path / "dl"), source="modelscope")
+    assert rc == 0 and "modelscope.cn/models/radxa/m/resolve/master/" in seen["url"]

@@ -54,7 +54,7 @@ python3 npuzoo-doctor.py --inspect qwen3-4b-rk3588-w8a8.rkllm --board rk3588 --r
 
 ## 找别人已经转好的模型
 
-Hugging Face 上已经有几百个仓库发布了 `.rkllm` 文件，但哪些能在你的板子上加载，下载之前没人告诉你。
+Hugging Face 和魔搭（ModelScope）上已经有几百个仓库发布了 `.rkllm` 文件，但哪些能在你的板子上加载，下载之前没人告诉你。
 
 ```
 $ npuzoo find qwen3 1.7b --board rk3588 --runtime 1.2.1
@@ -63,7 +63,8 @@ $ npuzoo find qwen3 1.7b --board rk3588 --runtime 1.2.1
 - ✓ 文件名和你的板子、运行时对得上；? 文件名信息不够，判断不了；✗ 一定加载不了（默认隐藏）。
 - 在板子上运行时，芯片和运行时版本会自动检测。
 - `npuzoo get` 从原作者的仓库下载（支持断点续传），核对大小和 SHA-256，再自动检查一遍文件。
-- 国内访问 Hugging Face 慢的话：`HF_ENDPOINT=https://hf-mirror.com npuzoo get ...`
+- 国内访问 Hugging Face 慢的话：`HF_ENDPOINT=https://hf-mirror.com npuzoo get ...`，或者只看魔搭上的：`npuzoo find qwen3 --source modelscope`
+- 默认从 Hugging Face 下载；想默认用魔搭，设置 `NPUZOO_SOURCE=modelscope`。
 - 这些文件是作者本人的作品，我们没有测试过；判断只依据文件名。清单每周自动更新，见 [index/README.md](index/README.md)。
 
 ## 转换结果表

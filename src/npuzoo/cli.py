@@ -62,6 +62,7 @@ def _main(argv=None):
     fd.add_argument("--index", default=None, help="community index URL or path")
     fd.add_argument("--refresh", action="store_true", help="fetch the index again even if cached today")
     fd.add_argument("--json", action="store_true", help="machine-readable output")
+    fd.add_argument("--source", choices=["huggingface", "modelscope"], help="only files from this site")
 
     gt = sub.add_parser("get", help="download a community .rkllm file, verify it, and inspect it")
     gt.add_argument("repo", help="Hugging Face repo, e.g. someone/qwen3-1.7b-rk3588")
@@ -71,6 +72,8 @@ def _main(argv=None):
     gt.add_argument("--dir", default=None, help="where to save (default: ~/.npuzoo/community/<repo>)")
     gt.add_argument("--index", default=None, help="community index URL or path")
     gt.add_argument("--force", action="store_true", help="download even if the name says it will not load")
+    gt.add_argument("--source", choices=["huggingface", "modelscope"],
+                    help="site to download from (default: Hugging Face; or set NPUZOO_SOURCE)")
 
     sp = sub.add_parser("support", help="which RKLLM release added a model family or chip")
     sp.add_argument("name", nargs="?", help="model or chip, e.g. qwen3, Qwen3ForCausalLM, rk3562")
@@ -98,11 +101,12 @@ def _main(argv=None):
     if args.cmd == "find":
         from .community import cmd_find
         return cmd_find(" ".join(args.query), board=args.board, runtime=args.runtime, index_src=args.index,
-                        show_all=args.all, limit=args.limit, as_json=args.json, refresh=args.refresh)
+                        show_all=args.all, limit=args.limit, as_json=args.json, refresh=args.refresh,
+                        source=args.source)
     if args.cmd == "get":
         from .community import cmd_get
         return cmd_get(args.repo, args.path, board=args.board, runtime=args.runtime,
-                       index_src=args.index, dest=args.dir, force=args.force)
+                       index_src=args.index, dest=args.dir, force=args.force, source=args.source)
     if args.cmd == "inspect":
         from .inspect import cmd_inspect
         return cmd_inspect(args.file, board=args.board, runtime=args.runtime,

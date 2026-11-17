@@ -80,6 +80,52 @@ def test_dump_is_valid_json_one_file_per_line():
 
 
 def test_refuses_to_write_a_tiny_index(tmp_path, monkeypatch):
-    monkeypatch.setattr(bci, "build", lambda: {"files": [], "repos": 0})
+    monkeypatch.setattr(bci, "build", lambda **kw: {"files": [], "repos": 0})
     out = tmp_path / "c.json"
     assert bci.main(["--out", str(out)]) == 1 and not out.exists()
+
+
+# ------------------------------------------------------------ ModelScope
+
+MS_LIST_OPENAPI = {"success": True, "data": {"models": [
+    {"id": "radxa/Qwen3-1.7B-RKLLM", "downloads": 1234, "license": "apache-2.0",
+     "last_modified": "2026-09-01T10:00:00Z"},
+    {"owner": "cix", "name": "Qwen2.5-VL", "downloads": 9},
+], "total_count": 2}}
+MS_LIST_LEGACY = {"Code": 200, "Data": {"Model": {"Models": [
+    {"Path": "AXERA-TECH", "Name": "Qwen3-0.6B", "Downloads": 77, "LastUpdatedTime": 1760000000}],
+    "TotalCount": 1}}}
+MS_FILES = {"Code": 200, "Data": {"Files": [
+    {"Path": "rk3588", "Type": "tree"},
+    {"Path": "rk3588/Qwen3-1.7B-w8a8-rk3588-1.2.1.rkllm", "Type": "blob", "Size": 2312345678, "Sha256": "ef" * 32},
+    {"Path": "README.md", "Type": "blob", "Size": 100, "Sha256": "00" * 32},
+]}, "Success": True}
+
+
+def test_ms_items_both_api_generations():
+    assert [bci.ms_repo_id(i) for i in bci.ms_items(MS_LIST_OPENAPI)] == ["radxa/Qwen3-1.7B-RKLLM", "cix/Qwen2.5-VL"]
+    assert [bci.ms_repo_id(i) for i in bci.ms_items(MS_LIST_LEGACY)] == ["AXERA-TECH/Qwen3-0.6B"]
+    assert bci.ms_items(None) == [] and bci.ms_items({"Code": 500}) == []
+
+
+def test_ms_files_keeps_rkllm_blobs():
+    assert bci.ms_files(MS_FILES) == [("rk3588/Qwen3-1.7B-w8a8-rk3588-1.2.1.rkllm", 2312345678, "ef" * 32)]
+    assert bci.ms_files({"Data": []}) == [] and bci.ms_files({}) == []
+
+
+def test_ms_entries():
+    item = bci.ms_items(MS_LIST_OPENAPI)[0]
+    e = bci.ms_entries(item, bci.ms_files(MS_FILES))[0]
+    assert e["source"] == "modelscope" and e["repo"] == "radxa/Qwen3-1.7B-RKLLM"
+    assert e["downloads"] is None and e["downloads_total"] == 1234 and e["updated"] == "2026-09-01"
+    legacy = bci.ms_entries(bci.ms_items(MS_LIST_LEGACY)[0], [("m.rkllm", 1, None)])[0]
+    assert legacy["updated"] == "2025-10-09"
+
+
+def test_modelscope_failure_keeps_huggingface(monkeypatch):
+    monkeypatch.setattr(bci, "QUERIES", [])
+    def boom(sleep=0):
+        raise RuntimeError("down")
+    monkeypatch.setattr(bci, "build_modelscope", boom)
+    idx = bci.build(sleep=0)
+    assert idx["sources"] == {"huggingface": 0, "modelscope": 0}

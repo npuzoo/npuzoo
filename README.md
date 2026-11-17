@@ -80,8 +80,8 @@ $ npuzoo find qwen3 1.7b --board rk3588 --runtime 1.2.1     # (example repos)
 On a board, `--board` and `--runtime` are detected for you.
 
 `get` downloads from the author's repo (resumable; `HF_ENDPOINT=https://hf-mirror.com`
-works), checks size and SHA-256 against what Hugging Face published, then runs
-`inspect`. The index of every public `.rkllm` file is rebuilt weekly — see
+works), checks size and SHA-256 against what the site published, then runs
+`inspect`. Files published on ModelScope are indexed too (`--source modelscope`). The index of every public `.rkllm` file is rebuilt weekly — see
 [index/README.md](index/README.md). These files are their authors' work and are
 not tested by us; the verdicts come from what the file names claim.
 
