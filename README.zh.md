@@ -17,8 +17,11 @@ $ npuzoo inspect m.rkllm  # 拷到板子之前：这真的是模型吗？芯片�
 $ npuzoo find qwen3 1.7b  # 搜别人转好的 .rkllm 模型，只显示你这块板子、这个运行时能用的
 $ npuzoo support qwen3    # 这个模型从 RKLLM 哪个版本开始支持（工具和运行时都要这个版本以上）
 $ npuzoo pull qwen3-1.7b  # 下载为你的板子、你的运行时转换并验证过的模型包（制作中）
-$ npuzoo run qwen3-1.7b   # 在 NPU 上运行（CPU 更快时如实告诉你）（制作中）
+$ npuzoo run m.rkllm      # 在 NPU 上对话，结束后显示运行时自己统计的预填充、生成速度
+$ npuzoo serve m.rkllm    # 提供 OpenAI 兼容接口（:8080），Home Assistant、Open WebUI 等可直接接入
 ```
+
+`run` 和 `serve` 支持 RKLLM 运行时 1.2.1–1.3.1，按瑞芯微官方头文件编写，结构体布局在 CI 里逐项核对过；**还没有在真板子上跑过**，欢迎反馈。
 
 ## 不用安装，现在就体检
 

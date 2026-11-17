@@ -78,3 +78,19 @@ jobs:
           cat out.txt
           test "$code" -eq 1
           grep -q "Git LFS pointer" out.txt
+
+  rkllm-abi:
+    # The ctypes binding (src/npuzoo/rkllm_rt.py) against Rockchip's own
+    # headers, compiled for aarch64 and x86_64 with clang — every struct size
+    # and field offset, for each runtime release `npuzoo run` supports.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: check every supported release
+        run: |
+          for v in 1.3.1:1.3 1.3.0:1.3 1.2.3:1.2 1.2.2:1.2 1.2.1:1.2; do
+            tag=${v%%:*}; prof=${v##*:}
+            curl -fsSL "https://raw.githubusercontent.com/airockchip/rknn-llm/release-v$tag/rkllm-runtime/Linux/librkllm_api/include/rkllm.h" \
+              -o "/tmp/rkllm-$tag.h"
+            python3 tools/check_rkllm_abi.py "/tmp/rkllm-$tag.h" "$prof"
+          done

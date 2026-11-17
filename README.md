@@ -19,7 +19,8 @@ $ npuzoo inspect m.rkllm  # before copying: is it really a model, for this chip,
 $ npuzoo find qwen3 1.7b  # community .rkllm files on Hugging Face that fit YOUR board and runtime
 $ npuzoo support qwen3    # which RKLLM release added it (toolkit AND runtime), from Rockchip's changelog
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
-$ npuzoo run qwen3-1.7b   # run it on the NPU (or CPU, if that's honestly faster)
+$ npuzoo run m.rkllm      # chat on the NPU; prints prefill/generate tok/s from the runtime itself
+$ npuzoo serve m.rkllm    # OpenAI chat API on :8080 — Home Assistant, Open WebUI, openai clients
 ```
 
 `explain` can date a log that contains no version line at all. The runtime's
@@ -126,7 +127,7 @@ without a source.
 | runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
 | standalone one-file doctor | v0.1 — works now; includes `--explain`, `--inspect` and `--pc` |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
-| `npuzoo run` (RKLLM backend) | stub — lands with the first model batch |
+| `npuzoo run` / `npuzoo serve` (RKLLM runtime 1.2.1–1.3.1) | v0.2 — written against Rockchip's headers; every struct size and offset checked in CI for aarch64 (`tools/check_rkllm_abi.py`); **not yet run on a board** |
 | conversion pipeline (x86) | skeleton in `pipeline/` |
 | voice pipeline preset | planned |
 

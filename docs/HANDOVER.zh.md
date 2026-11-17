@@ -6,12 +6,14 @@
 
 ```
 src/npuzoo/
-  cli.py            命令入口：doctor / explain / inspect / find / get / support / pull / list / run(stub)
+  cli.py            命令入口：doctor / explain / inspect / find / get / support / pull / list / run / serve
   doctor.py         板子体检。每条检查规则的依据都在 docs/UPSTREAM.md 里，有出处
   known_issues.py   真实失败特征库：25 条，全部来自公开日志（其中 2 条来自本仓库转换矩阵的公开运行记录）
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
   fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
   inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
+  rkllm_rt.py       librkllmrt.so 的 ctypes 绑定，两套结构体布局（1.2.1–1.2.3、1.3.x），照官方头文件写
+  runner.py         npuzoo run / serve：上板前先 inspect；serve 提供 OpenAI 接口，多轮对话映射到运行时的历史
   pc.py             npuzoo doctor --pc：检查用来转换模型的 x86 电脑（工具版本、Python、依赖锁定、内存够转多大的模型）
   models.py         各版本 RKLLM 支持哪些模型系列和芯片（来自瑞芯微 CHANGELOG）；npuzoo support，inspect/find/explain 都用它
   community.py      npuzoo find / get：搜 HF 上别人转好的 .rkllm，按文件名判断能不能在你的板子上跑；下载校验
@@ -20,6 +22,7 @@ standalone/
   npuzoo-doctor.py  单文件免安装版（生成物，勿手改），curl | python3 即可跑
 tools/
   build_standalone.py  从 src/ 生成上面那个文件；有防命名冲突检查
+  check_rkllm_abi.py  用 clang 编译官方 rkllm.h（aarch64），逐项核对 rkllm_rt.py 的结构体大小和偏移（CI 里跑）
   build_community_index.py  从 HF 接口生成 index/community.json（每周由 GitHub Actions 自动跑）
 index/
   community.json    HF 上全部公开 .rkllm 文件的清单（自动生成，勿手改）
@@ -54,6 +57,9 @@ python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 ```
 
 ## 板子到手那天
+
+0. 先验证 `npuzoo run`：`npuzoo run some.rkllm -p "你好"`，看能否加载、出字、打印速度；再起 `npuzoo serve`，用 curl 调 /v1/chat/completions。
+   这两条命令只在桌面上用假运行时测过，结构体布局用 clang 对官方头文件核过，真机上第一次跑最可能出问题的是 CPU 核掩码和 embed_flash 的默认值。
 
 1. 官方 Debian 镜像跑 `sudo python3 standalone/npuzoo-doctor.py`，存输出
 2. 换 Armbian 再跑一次，存输出

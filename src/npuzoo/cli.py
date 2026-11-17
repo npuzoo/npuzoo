@@ -39,8 +39,26 @@ def _main(argv=None):
     ls = sub.add_parser("list", help="list packages available for this board")
     ls.add_argument("--index", default=None)
 
-    run = sub.add_parser("run", help="run a pulled model")
-    run.add_argument("name")
+    def model_opts(sp):
+        sp.add_argument("--lib", help="path to librkllmrt.so (default: found like doctor does)")
+        sp.add_argument("--context", type=int, default=4096, help="max_context_len (default 4096)")
+        sp.add_argument("--max-new-tokens", type=int, default=1024)
+        sp.add_argument("--temperature", type=float, default=0.8)
+        sp.add_argument("--force", action="store_true", help="load even if inspect says it will fail")
+
+    run = sub.add_parser("run", help="chat with a .rkllm model on the NPU; prints the runtime's own speed")
+    run.add_argument("name", help="a .rkllm file, or a pulled package name")
+    run.add_argument("--prompt", "-p", help="one prompt, then exit (default: interactive)")
+    run.add_argument("--think", action="store_true", help="enable thinking mode (Qwen3)")
+    run.add_argument("--json", action="store_true", help="answer and timings as JSON")
+    model_opts(run)
+
+    sv = sub.add_parser("serve", help="serve a .rkllm model over the OpenAI chat API")
+    sv.add_argument("name", help="a .rkllm file, or a pulled package name")
+    sv.add_argument("--host", default="0.0.0.0")
+    sv.add_argument("--port", type=int, default=8080)
+    sv.add_argument("--model-name", help="model id clients see (default: the file name)")
+    model_opts(sv)
 
     ex = sub.add_parser("explain", help="read an RKLLM/RKNN log and say what went wrong")
     ex.add_argument("logfile", nargs="?", help="log file to read (default: stdin)")
@@ -112,9 +130,15 @@ def _main(argv=None):
         return cmd_inspect(args.file, board=args.board, runtime=args.runtime,
                            expect_sha256=args.sha256, expect_size=args.size, as_json=args.json)
     if args.cmd == "run":
-        print("npuzoo run: lands in v0.2 with the first model batch.")
-        print("Meanwhile: npuzoo pull prints the exact command to run each package by hand.")
-        return 0
+        from .runner import cmd_run
+        return cmd_run(args.name, prompt=args.prompt, lib_path=args.lib, force=args.force, context=args.context,
+                       max_new_tokens=args.max_new_tokens, temperature=args.temperature, think=args.think,
+                       as_json=args.json)
+    if args.cmd == "serve":
+        from .runner import cmd_serve
+        return cmd_serve(args.name, host=args.host, port=args.port, lib_path=args.lib, force=args.force,
+                         context=args.context, max_new_tokens=args.max_new_tokens,
+                         temperature=args.temperature, name=args.model_name)
 
     p.print_help()
     return 1
