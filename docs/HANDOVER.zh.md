@@ -86,8 +86,8 @@ python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 
 1. 从 airockchip/rknn-llm 的 rkllm-toolkit 目录装 whl（注意 Python 3.10/3.11/3.12，
    3.12 要先 `export BUILD_CUDA_EXT=0`；RWKV 只能 3.12）
-2. 跑 pipeline/convert_rkllm.py 做转换兼容矩阵：模型 × toolkit 版本 → 成败 + 报错
-3. 矩阵标注"仅转换验证"，发出去——这张表目前没人公开发过
+2. 转换兼容矩阵已经在 GitHub Actions 上跑（pipeline/matrix，见 docs/conversion-matrix.md）；单个模型在本地用 npuzoo convert，要生成制品库记录用 pipeline/convert_rkllm.py（它调用 npuzoo convert）
+3. 2B 以上的模型（GitHub 免费机器内存不够）在这台机器上用 npuzoo convert 转，结果按矩阵的格式补进 docs/conversion-matrix.md，标注"仅转换验证"
 
 ## 重要事实（细节和出处都在 docs/UPSTREAM.md）
 

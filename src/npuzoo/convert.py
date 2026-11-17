@@ -116,10 +116,10 @@ def model_facts(model_dir):
             "architecture": archs[0] if archs else None, "weights_bytes": weights}
 
 
-def remote_facts(repo):
+def remote_facts(repo, revision=None):
     """Same as model_facts, before downloading: sizes from the Hub's file list."""
     from huggingface_hub import HfApi
-    info = HfApi().model_info(repo, files_metadata=True)
+    info = HfApi().model_info(repo, revision=revision, files_metadata=True)
     weights = sum((s.size or 0) for s in info.siblings or [] if s.rfilename.endswith(".safetensors"))
     cfg = getattr(info, "config", None) or {}
     archs = cfg.get("architectures") or []
@@ -277,7 +277,7 @@ def preflight(info, facts, toolkit, family_since, out=sys.stdout):
 
 
 def cmd_convert(model, chip, dtype=None, out_dir=".", context=4096, calibrate=True, force=False,
-                work=None):
+                work=None, revision=None):
     from .pc import collect_pc
     from .models import family_for_name, family_for_arch
     chip = chip.lower()
@@ -297,7 +297,7 @@ def cmd_convert(model, chip, dtype=None, out_dir=".", context=4096, calibrate=Tr
         if local:
             facts = model_facts(model)
         else:
-            facts = remote_facts(model)
+            facts = remote_facts(model, revision)
     except Exception as e:
         print("✗ cannot read %s: %s: %s" % (model, type(e).__name__, e))
         return 1

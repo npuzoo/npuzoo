@@ -139,3 +139,15 @@ def test_run_logged_streams_and_keeps_progress_bars_out_of_the_log(tmp_path, cap
     assert code == 0 and peak == 2.0
     assert "hello" in capsys.readouterr().out
     assert log.read_text() == "hello\n"
+
+
+def test_pipeline_wrapper_dry_run(tmp_path, monkeypatch, capsys):
+    import importlib.util, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("convert_rkllm", root / "pipeline" / "convert_rkllm.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    monkeypatch.setattr("npuzoo.pc.collect_pc", lambda: dict(_pc(), toolkit=None))
+    assert mod.main(["--model", "Qwen/Qwen3-1.7B", "--out", str(tmp_path)]) == 0
+    rec = json.loads((tmp_path / "qwen3-1.7b.package.json").read_text())
+    assert rec["status"] == "dry-run" and rec["toolkit"] is None and rec["chip"] == "rk3588"
