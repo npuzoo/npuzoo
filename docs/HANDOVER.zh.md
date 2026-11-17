@@ -1,27 +1,34 @@
 # 交接说明（给回国后接手的你，或任何协作者）
 
-更新时间：2026-11-17 凌晨（第二轮，无硬件推进完成后）
+更新时间：2026-11-17 下午（第三轮：加入 npuzoo inspect）
 
 ## 仓库结构
 
 ```
 src/npuzoo/
-  cli.py            命令入口：doctor / explain / pull / list / run(stub)
+  cli.py            命令入口：doctor / explain / inspect / pull / list / run(stub)
   doctor.py         板子体检。每条检查规则的依据都在 docs/UPSTREAM.md 里，有出处
-  known_issues.py   真实失败特征库：11 条，全部来自公开渠道别人贴过的日志
+  known_issues.py   真实失败特征库：23 条，全部来自公开渠道别人贴过的日志
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
+  fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
+  inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
   registry.py       包索引格式 + pull（本地索引可用，托管注册表未做）
 standalone/
   npuzoo-doctor.py  单文件免安装版（生成物，勿手改），curl | python3 即可跑
 tools/
   build_standalone.py  从 src/ 生成上面那个文件；有防命名冲突检查
 tests/
-  test_doctor.py    15 个用例，全部对应真实世界配置
+  test_doctor.py    体检规则，对应真实世界配置
   test_explain.py   日志识别回归测试
+  test_fingerprint.py  运行时版本反推
+  test_inspect.py   模型文件检查（LFS 指针、错误页、GGUF、第三方格式、芯片与版本）
   logs/             7 个真实日志夹具（出处见 docs/UPSTREAM.md）
 pipeline/           x86 转换 + 板上跑分脚本（骨架）
 docs/
   UPSTREAM.md       ★ 最重要的文件：RKLLM 生态的核实事实 + 竞品清单，全部带出处
+  compatibility.md  版本配对规则和四种出错方式
+  fixes.md          每条已知故障的修法
+  rkllm-format.md   .rkllm 文件头能读什么、故意不破解什么、inspect 查什么
   outreach/first-post.md  论坛/Reddit 首发帖草稿和回帖守则
 ```
 
@@ -29,9 +36,10 @@ docs/
 
 ```
 pip install -e .
-python -m pytest tests          # 35 个测试，不需要硬件
+python -m pytest tests          # 81 个测试，不需要硬件
 npuzoo doctor --demo
 npuzoo explain tests/logs/version-mismatch.log
+npuzoo inspect some-model.rkllm --board rk3588 --runtime 1.3.1
 python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 ```
 
@@ -58,6 +66,13 @@ python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 - 竞品：rkllama(627★ 活跃)、rkllm-docker、oRKLLM 都做了版本配对的某种形式；
   没人做的是"体检+修复建议"和"实测 NPU vs CPU"。doctor/explain 对他们的用户也有用，
   是切入点不是对手
+
+## 一条原则：不破解厂商格式
+
+.rkllm 文件头里工具版本、目标芯片、量化方式是被刻意混淆的。我们不去解码：
+SDK 是专有许可，条款还没逐条核对；破解也违背「与生态共建，不对立」。
+这些信息在板子上加载时运行时会自己打印出来，用 npuzoo explain 读日志即可。
+详见 docs/rkllm-format.md。
 
 ## 还空着的坑（故意的）
 
