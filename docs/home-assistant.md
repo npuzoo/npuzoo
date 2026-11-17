@@ -73,6 +73,33 @@ print(r.choices[0].message.content, r.npuzoo)   # npuzoo adds the measured tok/s
 Tool calls use the usual `tools=[...]` argument and come back as
 `message.tool_calls`.
 
+## Start at boot
+
+A systemd service keeps the server running across reboots. Save this as
+`/etc/systemd/system/npuzoo.service`, with your user name and paths:
+
+```ini
+[Unit]
+Description=npuzoo serve
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=orangepi
+ExecStart=/home/orangepi/.local/bin/npuzoo serve /home/orangepi/models/qwen3-1.7b.rkllm --port 11434 --model-name qwen3-1.7b
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then `sudo systemctl daemon-reload && sudo systemctl enable --now npuzoo`,
+and `journalctl -u npuzoo -f` to watch it. If `npuzoo doctor` reports the
+NPU as that user, the service can use it too; if the NPU device is not
+readable by that user, add the user to the group that owns it (often
+`render` or `video`) rather than running the service as root.
+
 ## What to expect
 
 - **One request at a time.** The NPU runs one generation; other requests
