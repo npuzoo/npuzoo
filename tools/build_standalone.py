@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bundle doctor + explain into one dependency-free file.
+"""Bundle doctor + explain + inspect into one dependency-free file.
 
 The point of the standalone script is that someone on a forum can run it in
 one line, with no pip, no venv, no repo clone:
@@ -18,7 +18,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "npuzoo"
 OUT = ROOT / "standalone" / "npuzoo-doctor.py"
 
-MODULES = ["known_issues", "fingerprint", "doctor", "explain"]
+MODULES = ["known_issues", "fingerprint", "doctor", "explain", "inspect"]
 
 # package data a single file cannot read from disk, inlined instead
 EMBED = {"fingerprint": ("EMBEDDED", SRC / "data" / "runtime_fingerprints.json")}
@@ -31,6 +31,8 @@ HEADER = '''#!/usr/bin/env python3
 #   python3 npuzoo-doctor.py              # check this board
 #   python3 npuzoo-doctor.py --json       # machine-readable
 #   python3 npuzoo-doctor.py --explain f  # read an RKLLM/RKNN log instead
+#   python3 npuzoo-doctor.py --inspect m.rkllm [--board rk3588] [--runtime 1.2.1]
+#                                         # will this model file load here?
 #
 # Reads only /proc, /sys and the runtime .so files. Sends nothing anywhere.
 '''
@@ -55,8 +57,25 @@ def _run(argv):
     argv = list(argv)
     if "--help" in argv or "-h" in argv:
         print(__doc__ or "")
-        print("usage: npuzoo-doctor.py [--json] [--demo] [--explain [FILE]]")
+        print("usage: npuzoo-doctor.py [--json] [--demo] [--explain [FILE]]\\n"
+              "       npuzoo-doctor.py --inspect FILE [--board CHIP] [--runtime VER]\\n"
+              "                        [--sha256 HEX] [--size BYTES] [--json]")
         return 0
+    if "--inspect" in argv:
+        i = argv.index("--inspect")
+        if len(argv) <= i + 1:
+            print("--inspect needs a model file path", file=sys.stderr)
+            return 2
+
+        def opt(flag):
+            if flag in argv and len(argv) > argv.index(flag) + 1:
+                return argv[argv.index(flag) + 1]
+            return None
+        size = opt("--size")
+        return cmd_inspect(argv[i + 1], board=opt("--board"), runtime=opt("--runtime"),
+                           expect_sha256=opt("--sha256"),
+                           expect_size=int(size) if size else None,
+                           as_json="--json" in argv)
     if "--explain" in argv:
         i = argv.index("--explain")
         path = argv[i + 1] if len(argv) > i + 1 else None
@@ -100,7 +119,9 @@ def check(bundled):
         for node in mod.body:
             targets = []
             if isinstance(node, ast.Assign):
-                targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+                for tgt in node.targets:
+                    elts = tgt.elts if isinstance(tgt, ast.Tuple) else [tgt]
+                    targets += [e.id for e in elts if isinstance(e, ast.Name)]
             elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                 targets = [node.name]
             for t in targets:

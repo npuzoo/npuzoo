@@ -12,6 +12,7 @@ npuzoo packages it.
 ```
 $ npuzoo doctor           # board, kernel, NPU driver, runtime libs — and how to fix them
 $ npuzoo explain err.log  # paste a failing RKLLM/RKNN log, get the actual cause
+$ npuzoo inspect m.rkllm  # before copying: is it really a model, for this chip, for this runtime?
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
 $ npuzoo run qwen3-1.7b   # run it on the NPU (or CPU, if that's honestly faster)
 ```
@@ -40,6 +41,14 @@ If something is failing, pipe the log through it:
 
 ```
 ./your-demo 2>&1 | python3 npuzoo-doctor.py --explain
+```
+
+Before copying a downloaded model to the board, check it can load at all —
+Git LFS pointers, saved error pages, GGUF files and wrong-chip builds are the
+usual suspects:
+
+```
+python3 npuzoo-doctor.py --inspect qwen3-4b-rk3588-w8a8.rkllm --board rk3588 --runtime 1.3.1
 ```
 
 ## Why
@@ -77,7 +86,8 @@ without a source.
 | Component | Status |
 |---|---|
 | `npuzoo doctor` (RK3588/RK3576/RK3562/RV1126B) | v0.1 — works now, calibrating against real boards |
-| `npuzoo explain` (log → diagnosis) | v0.1 — 22 failure signatures, each with a test fixture |
+| `npuzoo explain` (log → diagnosis) | v0.1 — 23 failure signatures; 7 real logs as regression fixtures |
+| `npuzoo inspect` (model file → can it load?) | v0.1 — LFS pointers, error pages, GGUF, third-party `.rkllm`, wrong chip or format, version order, checksum. See [docs/rkllm-format.md](docs/rkllm-format.md) |
 | runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
 | standalone one-file doctor | v0.1 — works now |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |

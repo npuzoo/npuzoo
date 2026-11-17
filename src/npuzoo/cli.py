@@ -44,6 +44,14 @@ def _main(argv=None):
     ex = sub.add_parser("explain", help="read an RKLLM/RKNN log and say what went wrong")
     ex.add_argument("logfile", nargs="?", help="log file to read (default: stdin)")
 
+    ins = sub.add_parser("inspect", help="check a model file before copying it to the board")
+    ins.add_argument("file", help="the .rkllm file to check")
+    ins.add_argument("--board", help="chip of the target board, e.g. rk3588 (auto-detected on a board)")
+    ins.add_argument("--runtime", help="librkllmrt version on the board, e.g. 1.3.1")
+    ins.add_argument("--sha256", help="expected SHA-256 (Hugging Face: the file's LFS oid)")
+    ins.add_argument("--size", type=int, help="expected size in bytes")
+    ins.add_argument("--json", action="store_true", help="machine-readable output")
+
     args = p.parse_args(argv)
 
     if args.cmd == "doctor":
@@ -58,6 +66,10 @@ def _main(argv=None):
     if args.cmd == "explain":
         from .explain import cmd_explain
         return cmd_explain(args.logfile)
+    if args.cmd == "inspect":
+        from .inspect import cmd_inspect
+        return cmd_inspect(args.file, board=args.board, runtime=args.runtime,
+                           expect_sha256=args.sha256, expect_size=args.size, as_json=args.json)
     if args.cmd == "run":
         print("npuzoo run: lands in v0.2 with the first model batch.")
         print("Meanwhile: npuzoo pull prints the exact command to run each package by hand.")
