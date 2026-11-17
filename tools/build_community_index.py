@@ -223,6 +223,18 @@ def ms_files(payload):
     return out
 
 
+def ms_downloads(item):
+    """The repo's total downloads; the field name differs between ModelScope APIs."""
+    for k in ("downloads", "Downloads", "download_count", "DownloadCount", "downloads_count", "total_downloads"):
+        v = item.get(k)
+        if isinstance(v, int) and not isinstance(v, bool):
+            return v
+    for k, v in item.items():
+        if "download" in k.lower() and isinstance(v, int) and not isinstance(v, bool):
+            return v
+    return None
+
+
 def ms_entries(item, files):
     rid = ms_repo_id(item)
     lic = item.get("license") or item.get("License")
@@ -235,7 +247,7 @@ def ms_entries(item, files):
         "updated": _date(item.get("last_modified") or item.get("LastUpdatedTime") or item.get("UpdatedAt")
                          or item.get("updated_at") or item.get("GmtModified")),
         "downloads": None,
-        "downloads_total": item.get("downloads") or item.get("Downloads"),
+        "downloads_total": ms_downloads(item),
         "license": lic if isinstance(lic, str) and lic else None,
         "base_model": None,
         "gated": False,
@@ -276,6 +288,8 @@ def build_modelscope(sleep=0.25):
             if page == 1 and not items:
                 print("  modelscope %s: no items; response starts %s" % (
                     term, json.dumps(payload, ensure_ascii=False)[:400]), file=sys.stderr)
+            if page == 1 and items and term == MS_TERMS[0] and isinstance(items[0], dict):
+                print("  modelscope item fields: %s" % ", ".join(sorted(items[0])), file=sys.stderr)
             for it in items:
                 rid = ms_repo_id(it) if isinstance(it, dict) else None
                 if rid:

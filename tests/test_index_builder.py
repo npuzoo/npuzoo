@@ -146,3 +146,10 @@ def test_modelscope_request_failures_are_skipped(monkeypatch):
     monkeypatch.setattr(bci, "_get", flaky)
     assert bci._ms_get("https://modelscope.example/api/v1/models/x/repo/files") is None
     assert len(calls) == 1
+
+
+def test_modelscope_download_field_names():
+    assert bci.ms_downloads({"Downloads": 12}) == 12
+    assert bci.ms_downloads({"download_count": 7}) == 7
+    assert bci.ms_downloads({"TotalDownloadsCount": 9, "name": "x"}) == 9
+    assert bci.ms_downloads({"downloads": True}) is None and bci.ms_downloads({}) is None

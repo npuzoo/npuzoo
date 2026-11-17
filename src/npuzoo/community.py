@@ -216,7 +216,8 @@ def cmd_find(query="", board=None, runtime=None, index_src=None, show_all=False,
             print("  %s %s%s" % (MARK[r["verdict"]], r["repo"], "   [ModelScope]" if src == "modelscope" else ""))
             print("      %s" % r["path"])
             if src == "modelscope":
-                pop = "%s downloads in total" % (r.get("downloads_total") if r.get("downloads_total") is not None else "?")
+                total = r.get("downloads_total")
+                pop = "%s downloads in total" % total if total is not None else "downloads unknown"
             else:
                 pop = "%s downloads/30d" % (dl if dl is not None else "?")
             print("      %s GB · toolkit %s · updated %s · %s%s" % (
