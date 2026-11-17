@@ -121,6 +121,12 @@ Encoded in `src/npuzoo/known_issues.py`, with a fixture per signature in
 | `RKNN Model version: X not match with rknn runtime version: Y` | librknnrt older than the .rknn |
 | `libomp.so: cannot open shared object file` | OpenMP runtime missing next to librkllmrt.so |
 | `matmul(w8a8) run failed` | usually downstream of one of the above |
+| `No module named 'pkg_resources'` (at `RKLLM()`) | setuptools too new for rkllm-toolkit; pin `setuptools<80` |
+| `module 'pyarrow' has no attribute 'PyExtensionType'` | pyarrow too new for toolkit 1.1.x's datasets 2.14.6; pin `pyarrow<15` |
+
+The last two come from npuzoo's own conversion matrix: fresh installs of
+rkllm-toolkit 1.2.3 and 1.1.4 on GitHub's runners in November 2026. The
+workflow logs are public (`.github/workflows/conversion-matrix.yml`).
 
 ## Who else is in this space
 

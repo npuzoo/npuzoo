@@ -371,6 +371,40 @@ ISSUES = [
         ],
     },
     {
+        # Seen in npuzoo's own conversion matrix (public GitHub Actions logs,
+        # Nov 2026): rkllm-toolkit 1.2.3 on Python 3.10 with current setuptools.
+        "id": "toolkit-no-pkg-resources",
+        "severity": BLOCKER,
+        "match": [r"No module named 'pkg_resources'"],
+        "title": "rkllm-toolkit cannot start: this setuptools no longer has pkg_resources",
+        "why": (
+            "The toolkit imports pkg_resources when RKLLM() is created, before any model is "
+            "loaded. Recent setuptools releases removed it, so a fresh install of the toolkit "
+            "fails at the first line of a conversion script even though `import rkllm` works."
+        ),
+        "fix": [
+            "In the environment where rkllm-toolkit is installed:",
+            '  pip install "setuptools<80"',
+        ],
+    },
+    {
+        # Same source: rkllm-toolkit 1.1.4, which pins datasets 2.14.6.
+        "id": "toolkit-pyarrow-too-new",
+        "severity": BLOCKER,
+        "match": [r"module 'pyarrow' has no attribute 'PyExtensionType'"],
+        "title": "rkllm-toolkit cannot import: pyarrow is too new for its datasets version",
+        "why": (
+            "rkllm-toolkit 1.1.x pins datasets 2.14.6 but leaves pyarrow unpinned. That "
+            "datasets release subclasses pyarrow.PyExtensionType, which current pyarrow has "
+            "removed, so `from rkllm.api import RKLLM` fails on a fresh install today."
+        ),
+        "fix": [
+            "In the environment where rkllm-toolkit is installed:",
+            '  pip install "pyarrow<15"',
+            "Or move to toolkit 1.2.x or newer — and a runtime of the same version on the board.",
+        ],
+    },
+    {
         "id": "rknn-dynamic-shape-warning",
         "severity": NOISE,
         "match": [r"query RKNN_QUERY_INPUT_DYNAMIC_RANGE error",

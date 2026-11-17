@@ -134,3 +134,16 @@ def test_closed_pipe_is_not_an_error(tmp_path, monkeypatch):
     log.write_text("E rkllm: Failed to allocate buffer for kv cache\n")
     monkeypatch.setattr(_s, "stdout", ClosedPipe())
     assert main(["explain", str(log)]) == 0
+
+
+def test_toolkit_without_pkg_resources():
+    # from npuzoo's own conversion matrix: rkllm-toolkit 1.2.3, fresh install
+    got = scan(read("toolkit-pkg-resources.log"))
+    assert [h["id"] for h in got] == ["toolkit-no-pkg-resources"]
+    assert any("setuptools<80" in line for line in got[0]["fix"])
+
+
+def test_toolkit_with_too_new_pyarrow():
+    # same source: rkllm-toolkit 1.1.4 pins datasets 2.14.6, pyarrow unpinned
+    got = scan(read("toolkit-pyarrow-too-new.log"))
+    assert [h["id"] for h in got] == ["toolkit-pyarrow-too-new"]

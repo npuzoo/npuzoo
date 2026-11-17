@@ -8,7 +8,7 @@
 src/npuzoo/
   cli.py            命令入口：doctor / explain / inspect / find / get / pull / list / run(stub)
   doctor.py         板子体检。每条检查规则的依据都在 docs/UPSTREAM.md 里，有出处
-  known_issues.py   真实失败特征库：23 条，全部来自公开渠道别人贴过的日志
+  known_issues.py   真实失败特征库：25 条，全部来自公开日志（其中 2 条来自本仓库转换矩阵的公开运行记录）
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
   fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
   inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
@@ -28,7 +28,7 @@ tests/
   test_inspect.py   模型文件检查（LFS 指针、错误页、GGUF、第三方格式、芯片与版本）
   test_community.py find / get：判断、排序、断点续传、校验
   test_index_builder.py  索引生成脚本（用录下来的接口格式，不联网）
-  logs/             7 个真实日志夹具（出处见 docs/UPSTREAM.md）
+  logs/             9 个真实日志夹具（出处见 docs/UPSTREAM.md）
 pipeline/           x86 转换 + 板上跑分脚本（骨架）
 docs/
   UPSTREAM.md       ★ 最重要的文件：RKLLM 生态的核实事实 + 竞品清单，全部带出处

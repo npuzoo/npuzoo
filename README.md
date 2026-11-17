@@ -116,7 +116,7 @@ without a source.
 | Component | Status |
 |---|---|
 | `npuzoo doctor` (RK3588/RK3576/RK3562/RV1126B) | v0.1 — works now, calibrating against real boards |
-| `npuzoo explain` (log → diagnosis) | v0.1 — 23 failure signatures; 7 real logs as regression fixtures |
+| `npuzoo explain` (log → diagnosis) | v0.1 — 25 failure signatures; 9 real logs as regression fixtures (2 from our own conversion runs) |
 | `npuzoo inspect` (model file → can it load?) | v0.1 — LFS pointers, error pages, GGUF, third-party `.rkllm`, wrong chip or format, version order, checksum. See [docs/rkllm-format.md](docs/rkllm-format.md) |
 | `npuzoo find` / `npuzoo get` (community files) | v0.1 — weekly index of every public `.rkllm` on Hugging Face; fit judged from names, downloads verified |
 | runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
