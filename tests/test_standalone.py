@@ -40,3 +40,8 @@ def test_inspect_paths(tmp_path):
 def test_demo_and_help():
     assert run(["--demo"]).returncode in (0, 1)
     assert "--inspect" in run(["--help"]).stdout
+
+
+def test_pc_mode():
+    p = run(["--pc"])
+    assert "rkllm-toolkit" in p.stdout and p.returncode in (0, 1)

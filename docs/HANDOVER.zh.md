@@ -12,6 +12,7 @@ src/npuzoo/
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
   fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
   inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
+  pc.py             npuzoo doctor --pc：检查用来转换模型的 x86 电脑（工具版本、Python、依赖锁定、内存够转多大的模型）
   models.py         各版本 RKLLM 支持哪些模型系列和芯片（来自瑞芯微 CHANGELOG）；npuzoo support，inspect/find/explain 都用它
   community.py      npuzoo find / get：搜 HF 上别人转好的 .rkllm，按文件名判断能不能在你的板子上跑；下载校验
   registry.py       包索引格式 + pull（本地索引可用，托管注册表未做）

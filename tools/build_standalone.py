@@ -18,7 +18,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "npuzoo"
 OUT = ROOT / "standalone" / "npuzoo-doctor.py"
 
-MODULES = ["known_issues", "fingerprint", "doctor", "models", "explain", "inspect"]
+MODULES = ["known_issues", "fingerprint", "doctor", "models", "explain", "inspect", "pc"]
 
 # package data a single file cannot read from disk, inlined instead
 EMBED = {"fingerprint": ("EMBEDDED", SRC / "data" / "runtime_fingerprints.json")}
@@ -31,6 +31,7 @@ HEADER = '''#!/usr/bin/env python3
 #   python3 npuzoo-doctor.py              # check this board
 #   python3 npuzoo-doctor.py --json       # machine-readable
 #   python3 npuzoo-doctor.py --explain f  # read an RKLLM/RKNN log instead
+#   python3 npuzoo-doctor.py --pc         # check the x86 PC you convert models on
 #   python3 npuzoo-doctor.py --inspect m.rkllm [--board rk3588] [--runtime 1.2.1]
 #                                         # will this model file load here?
 #
@@ -57,10 +58,12 @@ def _run(argv):
     argv = list(argv)
     if "--help" in argv or "-h" in argv:
         print(__doc__ or "")
-        print("usage: npuzoo-doctor.py [--json] [--demo] [--explain [FILE]]\\n"
+        print("usage: npuzoo-doctor.py [--json] [--demo] [--pc] [--explain [FILE]]\\n"
               "       npuzoo-doctor.py --inspect FILE [--board CHIP] [--runtime VER]\\n"
               "                        [--sha256 HEX] [--size BYTES] [--json]")
         return 0
+    if "--pc" in argv:
+        return run_pc(as_json="--json" in argv)
     if "--inspect" in argv:
         i = argv.index("--inspect")
         if len(argv) <= i + 1:

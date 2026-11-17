@@ -209,6 +209,9 @@ def diagnose(info):
     else:
         add(FAIL, "board", "Not a recognized Rockchip board (or not running on the board).",
             fix="npuzoo targets RK3588/RK3588S/RK3576 first. See %s#boards" % DOC)
+        if platform.machine().lower() in ("x86_64", "amd64"):
+            add(INFO, "this-pc", "This is an x86 machine. If it is the one you convert models on, run: "
+                "npuzoo doctor --pc")
 
     add(INFO, "os", "%s · kernel %s" % (info.get("os"), info.get("kernel")))
     k = info.get("kernel") or ""

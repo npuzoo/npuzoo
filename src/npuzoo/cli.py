@@ -30,6 +30,7 @@ def _main(argv=None):
     d = sub.add_parser("doctor", help="check board, kernel, NPU driver and runtime libs")
     d.add_argument("--json", action="store_true", help="machine-readable output")
     d.add_argument("--demo", action="store_true", help="simulate a board (for development off-board)")
+    d.add_argument("--pc", action="store_true", help="check the x86 PC you convert models on instead")
 
     pull = sub.add_parser("pull", help="download a verified model package for this board")
     pull.add_argument("name", help="package name, e.g. qwen3-1.7b")
@@ -77,6 +78,9 @@ def _main(argv=None):
     args = p.parse_args(argv)
 
     if args.cmd == "doctor":
+        if args.pc:
+            from .pc import run_pc
+            return run_pc(as_json=args.json)
         from .doctor import run_doctor
         return run_doctor(as_json=args.json, demo=args.demo)
     if args.cmd == "pull":

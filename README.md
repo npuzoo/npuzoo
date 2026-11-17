@@ -11,6 +11,7 @@ npuzoo packages it.
 
 ```
 $ npuzoo doctor           # board, kernel, NPU driver, runtime libs — and how to fix them
+$ npuzoo doctor --pc      # the x86 PC you convert models on: toolkit, Python, pins, memory
 $ npuzoo explain err.log  # paste a failing RKLLM/RKNN log, get the actual cause
 $ npuzoo inspect m.rkllm  # before copying: is it really a model, for this chip, for this runtime?
 $ npuzoo find qwen3 1.7b  # community .rkllm files on Hugging Face that fit YOUR board and runtime
