@@ -163,11 +163,16 @@ def collect(demo=False):
 
     p = _find_lib(["librknnrt.so"])
     info["rknnrt"] = {"path": p,
-                      "version": _lib_version(p, [rb"librknnrt version:\s*([\d.]+)"]) if p else None}
+                      "version": _lib_version(p, [rb"RKNN SDK \(version:\s*([\w.]+)",
+                                                  rb"librknnrt version:\s*([\d.]+)"]) if p else None}
+    # The runtime version is NOT in the "rkllm-runtime version: %s" line — that is a
+    # format string, filled in at runtime. The literal lives in the SDK banner:
+    #   RKLLM SDK (version: 1.3.1 | target: Linux | build: 20cd29809 2026-09-28 ...)
+    # Verified against every release tag from 1.1.0 to 1.3.1.
     p = _find_lib(["librkllmrt.so"])
     info["rkllmrt"] = {"path": p,
-                       "version": _lib_version(p, [rb"rkllm-runtime version:\s*([\d.]+\w*)",
-                                                   rb"rkllm[\w\- ]*version[:\s]+([\d.]+)"]) if p else None}
+                       "version": _lib_version(p, [rb"RKLLM SDK \(version:\s*([\w.]+)",
+                                                   rb"rkllm-runtime version:\s*([\d.]+\w*)"]) if p else None}
 
     govs = {_read(f) for f in glob.glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_governor")}
     govs.discard(None)

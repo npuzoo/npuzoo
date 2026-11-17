@@ -9,6 +9,7 @@ one line, with no pip, no venv, no repo clone:
 It is generated, never hand-edited, so it cannot drift from the package.
 Regenerate with:  python tools/build_standalone.py
 """
+import json
 import pathlib
 import re
 import sys
@@ -17,7 +18,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "npuzoo"
 OUT = ROOT / "standalone" / "npuzoo-doctor.py"
 
-MODULES = ["known_issues", "doctor", "explain"]
+MODULES = ["known_issues", "fingerprint", "doctor", "explain"]
+
+# package data a single file cannot read from disk, inlined instead
+EMBED = {"fingerprint": ("EMBEDDED", SRC / "data" / "runtime_fingerprints.json")}
 
 HEADER = '''#!/usr/bin/env python3
 # npuzoo doctor — standalone, generated file. Do not edit.
@@ -56,6 +60,10 @@ DROP_IMPORT = re.compile(r"^\s*from \.[\w.]* import .*$", re.M)
 def module_source(name):
     text = (SRC / (name + ".py")).read_text()
     text = DROP_IMPORT.sub("", text)
+    if name in EMBED:
+        const, path = EMBED[name]
+        blob = json.dumps(json.loads(path.read_text()), separators=(",", ":"))
+        text += "\n\n%s = json.loads(%r)\n_cache = None\n" % (const, blob)
     return "# " + "-" * 68 + "\n# from src/npuzoo/%s.py\n# " % name + "-" * 68 + "\n" + text
 
 

@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    # ubuntu-24.04-arm is a free aarch64 runner for public repos. It has no NPU,
+    # but it is real ARM Linux — which catches the architecture-dependent bugs
+    # that an x86 CI would sail past, without owning a board.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e . pytest
+      - run: pytest tests -q
+
+      # doctor must survive a machine with no NPU at all and still exit cleanly
+      # enough to be useful. Exit code 1 is correct here (it found blockers).
+      - name: doctor does not crash off-board
+        run: npuzoo doctor || test $? -eq 1
+
+      - name: doctor --json is valid json
+        run: npuzoo doctor --json | python -c "import json,sys; json.load(sys.stdin)" || true
+
+      - name: demo board report
+        run: npuzoo doctor --demo
+
+      - name: explain reads a log
+        run: npuzoo explain tests/logs/version-mismatch.log || test $? -eq 1
+
+  standalone:
+    # the one-liner is what people actually run; if it drifts from src/ or stops
+    # working on an old Python, nothing else matters
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: regenerate and check it is committed
+        run: |
+          python tools/build_standalone.py
+          git diff --exit-code standalone/npuzoo-doctor.py \
+            || { echo "standalone/ is stale — run python tools/build_standalone.py"; exit 1; }
+
+      - name: runs with no install and no package data
+        run: |
+          cp standalone/npuzoo-doctor.py /tmp/d.py
+          cd /tmp
+          python d.py --demo
+          printf 'E rkllm: Failed to allocate buffer for kv cache\n' | python d.py --explain | tee out.txt
+          grep -q "at least 1.2.2" out.txt

@@ -210,6 +210,166 @@ ISSUES = [
                 "or re-run the whole command with sudo."],
     },
     {
+        "id": "runtime-older-than-toolkit",
+        "severity": BLOCKER,
+        "match": [r"rkllm-runtime version is lower than the rkllm-toolkit version"],
+        "title": "Runtime is older than the toolkit that built this model",
+        "why": (
+            "The precise form of the pairing problem, and the runtime tells you so outright: "
+            "the model was converted by a newer rkllm-toolkit than the librkllmrt.so on this "
+            "board. The message names the minimum runtime version you need."
+        ),
+        "fix": [
+            "Read the version it asks for from the message itself, then install that runtime.",
+            "Check what you have:  strings /usr/lib/librkllmrt.so | grep 'RKLLM SDK'",
+            "Upgrading the runtime is normally easier than re-converting the model.",
+        ],
+    },
+    {
+        "id": "model-too-old",
+        "severity": PROBLEM,
+        "match": [r"model version is too old, please use the latest toolkit"],
+        "title": "The .rkllm file predates this runtime",
+        "why": (
+            "The other direction: the runtime is newer than the file. Older model formats are "
+            "dropped over time, so a .rkllm someone published a year ago may simply no longer "
+            "load. Most community model repos never state which toolkit built their files."
+        ),
+        "fix": [
+            "Re-convert from the original weights with a toolkit matching your runtime.",
+            "Or install the older runtime the file was built for, if you can identify it.",
+        ],
+    },
+    {
+        "id": "wrong-target-platform",
+        "severity": BLOCKER,
+        "match": [r"model's target_platform does not match the real platform"],
+        "title": "This model was built for a different chip",
+        "why": (
+            "A .rkllm records its target chip. An RK3576 package will not run on RK3588 and "
+            "vice versa — the NPU layouts differ. Model repos frequently fail to say which "
+            "chip a file targets, so this is easy to hit by downloading the wrong one."
+        ),
+        "fix": [
+            "Check your chip:  npuzoo doctor",
+            "Then get the package built for it. npuzoo checks this before downloading.",
+        ],
+    },
+    {
+        "id": "unsupported-rope",
+        "severity": BLOCKER,
+        "match": [r"unsupported rope type was detected"],
+        "title": "Runtime too old for this model's positional encoding",
+        "why": (
+            "The model uses a RoPE variant this runtime does not implement. It is a capability "
+            "gap, not a configuration mistake — newer model families keep introducing these."
+        ),
+        "fix": ["Upgrade librkllmrt.so to the release that supports this model family.",
+                "If the newest runtime still refuses it, the model is not convertible yet."],
+    },
+    {
+        "id": "kv-cache-alloc-failed",
+        "severity": BLOCKER,
+        "match": [r"Failed to allocate buffer for kv cache",
+                  r"Failed to allocate compute buffers"],
+        "title": "Out of memory for the KV cache, not the weights",
+        "why": (
+            "The weights loaded; the context did not. The KV cache grows with max_context_len, "
+            "and it is allocated separately — which is why a model that 'fits' still dies when "
+            "you raise the context."
+        ),
+        "fix": [
+            "Lower max_context_len. Halving it roughly halves the cache.",
+            "Check free RAM at the moment of failure:  free -h",
+            "This is the first thing to try before concluding the model is too big.",
+        ],
+    },
+    {
+        "id": "context-too-small",
+        "severity": PROBLEM,
+        "match": [r"Max_context\[\d+\] must be less than the model's max_context_limit",
+                  r"The length of prompt is greater than max context",
+                  r"The context is not enough! history_s"],
+        "title": "Context length misconfigured or exceeded",
+        "why": (
+            "max_context_limit is baked in at conversion time; you cannot raise it at runtime "
+            "past that ceiling. Conversions before runtime 1.2.0 were commonly capped at 4096, "
+            "so an old package cannot be given a long context no matter what you pass."
+        ),
+        "fix": [
+            "The ceiling is printed at init as max_context_limit — you cannot exceed it.",
+            "To go higher, re-convert with a larger limit (1.2.0 and later support up to 16K).",
+            "If the prompt itself is too long, trim it or raise max_context within the ceiling.",
+        ],
+    },
+    {
+        "id": "invalid-model-file",
+        "severity": BLOCKER,
+        "match": [r"Invalid magic number, got",
+                  r"magic does not match the current model",
+                  r"Invalid rkllm model!"],
+        "title": "Not a valid .rkllm file",
+        "why": (
+            "Usually a truncated or partial download, a Git LFS pointer committed instead of "
+            "the real file, or an HTML error page saved under a .rkllm name."
+        ),
+        "fix": [
+            "Check the size and the first bytes:  ls -l model.rkllm && head -c 64 model.rkllm | xxd",
+            "A few hundred bytes of text means you downloaded a pointer or an error page.",
+            "Re-download and verify the checksum. npuzoo pull verifies sha256 for you.",
+        ],
+    },
+    {
+        "id": "unsupported-architecture-runtime",
+        "severity": BLOCKER,
+        "match": [r"model architecture \S+ is not supported by rkllm",
+                  r"Unsupported model architecture"],
+        "title": "Runtime does not support this architecture",
+        "why": "The runtime, not the converter, is refusing it. Pair with a toolkit/runtime that lists it.",
+        "fix": ["Upgrade both toolkit and runtime to a release that names this model family."],
+    },
+    {
+        "id": "armhf-2gb-limit",
+        "severity": BLOCKER,
+        "match": [r"32-bit systems only support models with weights smaller than 2GB"],
+        "title": "You are running a 32-bit userland",
+        "why": (
+            "The board is 64-bit but the OS image is armhf, which caps model weights at 2 GB. "
+            "Easy to miss, because everything else works."
+        ),
+        "fix": ["Confirm:  uname -m   (expect aarch64, not armv7l)",
+                "Reflash a 64-bit (arm64/aarch64) image. There is no workaround in userland."],
+    },
+    {
+        "id": "cpu-affinity-misconfigured",
+        "severity": PROBLEM,
+        "match": [r"number of enabled CPUs must be greater than or equal to the number of NPU cores",
+                  r"Expected The number of enabled CPUs between"],
+        "title": "CPU core mask does not fit the NPU core count",
+        "why": (
+            "RK3588 drives its 3 NPU cores from CPU threads, so the enabled-CPU mask has to be "
+            "at least as large as the NPU core count."
+        ),
+        "fix": ["Leave the CPU mask at its default unless you have measured a reason to change it.",
+                "If you must set it, enable at least as many CPUs as NPU cores in use."],
+    },
+    {
+        "id": "missing-eos-token",
+        "severity": PROBLEM,
+        "match": [r"Cannot find tokenizer eos token id in model file"],
+        "title": "No EOS token — generation will not stop cleanly",
+        "why": (
+            "Without an end-of-sequence id the model runs until it hits the context limit, which "
+            "looks like rambling or repetition rather than an error. A conversion-time problem, "
+            "surfacing at runtime."
+        ),
+        "fix": [
+            "Re-convert with a toolkit that reads this tokenizer correctly (1.3.0 added support",
+            "  for multiple EOS token ids).",
+            "As a stopgap, set a stop string in your client.",
+        ],
+    },
+    {
         "id": "init-failed",
         "severity": PROBLEM,
         "generic": True,          # suppressed when a specific blocker also matched
@@ -278,6 +438,82 @@ def by_id(issue_id):
         if issue["id"] == issue_id:
             return issue
     return None
+
+# --------------------------------------------------------------------
+# from src/npuzoo/fingerprint.py
+# --------------------------------------------------------------------
+"""Infer which RKLLM runtime produced a log, from the messages in it.
+
+Most logs people paste do not contain a version line — the banner scrolled off,
+or they pasted only the error. But the runtime's message catalogue grew a lot
+between releases (17 log strings in 1.1.0, 210 in 1.3.1), so the *presence* of a
+message pins a lower bound on the version.
+
+data/runtime_fingerprints.json was produced by extracting the literal strings
+from the official librkllmrt.so at every release tag from 1.1.0 to 1.3.1 and
+recording which release each message first appears in. See
+tools/build_fingerprints.py.
+
+This gives a lower bound, never an exact version: a 1.3.1 runtime can still emit
+a message introduced in 1.2.0. Phrase it that way to the user.
+"""
+import json
+import os
+
+_DATA = os.path.join(os.path.dirname(__file__), "data", "runtime_fingerprints.json")
+
+_cache = None
+
+# The standalone build inlines the table here, because a single file has no
+# package data directory to read from. tools/build_standalone.py fills it in.
+EMBEDDED = None
+
+
+def _load():
+    global _cache
+    if _cache is None:
+        if EMBEDDED:
+            _cache = (EMBEDDED["versions"], EMBEDDED["stems"])
+            return _cache
+        try:
+            with open(_DATA) as f:
+                d = json.load(f)
+            _cache = (d["versions"], d["stems"])
+        except Exception:
+            _cache = ([], [])
+    return _cache
+
+
+def infer_runtime(text):
+    """Return (min_version, [evidence]) or (None, []).
+
+    min_version is the newest 'introduced in' among the messages we recognise,
+    i.e. the runtime must be at least this new.
+    """
+    versions, stems = _load()
+    if not versions:
+        return None, []
+    order = {v: i for i, v in enumerate(versions)}
+    best, evidence = None, []
+    for stem, ver in stems:
+        if stem in text:
+            evidence.append((stem, ver))
+            if best is None or order[ver] > order[best]:
+                best = ver
+    if best is None:
+        return None, []
+    # only the messages that actually justify the bound are worth showing
+    evidence = [e for e in evidence if e[1] == best]
+    return best, evidence
+
+
+def is_newest(version):
+    versions, _ = _load()
+    return bool(versions) and version == versions[-1]
+
+
+EMBEDDED = json.loads('{"versions":["1.1.0","1.1.1","1.1.2","1.1.3","1.1.4","1.2.0","1.2.1b1","1.2.1","1.2.2","1.2.3","1.3.0","1.3.1"],"stems":[["Expected The number of enabled CPUs between 1 and 4 for","1.2.0"],["Expected The number of enabled CPUs between 1 and 8 for","1.2.0"],["Mismatch between enabled CPUs mask and expected count. Please check the configuration.","1.2.0"],["RKLLMExtendParam pointer is NULL","1.2.0"],["The n_keep must be less than the max_context_len","1.2.0"],["The number of enabled CPUs must be greater than or equal to the number of NPU cores.","1.2.0"],["The rkllm-runtime version is lower than the rkllm-toolkit version. Please update rkllm-runtime to","1.2.0"],["Warning: Your rknpu driver version is too low, please upgrade to","1.2.0"],["set quant params failed(w8a8)","1.2.0"],["set quant params failed[w4a8]","1.2.0"],["32-bit systems only support models with weights smaller than 2GB","1.2.1b1"],["An unsupported rope type was detected, please try upgrading the rkllm-runtime version.","1.2.1b1"],["Calling rkllm_set_chat_template will disable the internal automatic chat template parsing, including enable_thinking. Make sure your custom prompt is complete and valid.","1.2.1"],["Chat template auto-parsing failed: please configure it via rkllm_set_chat_template.","1.2.1"],["Failed to parse chat_template: invalid format detected.","1.2.1"],["Failed to set function tools, possibly because the chat_template is empty.","1.2.1"],["Failed to set function tools: invalid format detected. if you\'re providing multiple json objects, please use the following format: R\\"([{},{}])\\", do not include extra newlines, trailing commas, or any characters outside the JSON array.","1.2.1"],["Getting the last hidden layer is not supported for multiple batches.","1.2.1"],["Getting the logits is not supported for multiple batches.","1.2.1"],["Invalid parameter: use_cross_attn is set to 1, but cross attention parameters are not properly configured.","1.2.1"],["Multi-turn conversation mode does not support multi-batch inference.","1.2.1"],["RKLLMCrossAttnParam is empty!","1.2.1"],["The cross attention feature is only supported for custom-converted models.","1.2.1"],["The encoder_k_cache of encoder_params is empty!","1.2.1"],["The encoder_mask of encoder_params is empty!","1.2.1"],["The encoder_pos of encoder_params is empty!","1.2.1"],["The encoder_v_cache of encoder_params is empty!","1.2.1"],["The input data for all batch is empty.","1.2.1"],["The input_type of rkllm_input is not set.","1.2.1"],["The n_batch must be between 1 and 100, but got","1.2.1"],["The num_tokens of encoder_params must be between 1 and","1.2.1"],["The tool_response_str cannot be empty.","1.2.1"],["To enable cross-attention, set param.extend_param.use_cross_attn = 1.","1.2.1"],["Failed to allocate buffer for kv cache","1.2.2"],["Failed to allocate compute buffers","1.2.2"],["Failed to apply lora adapter","1.2.2"],["Lora adapter path does not exist!","1.2.2"],["Please provide a valid JSON format string. example: [{\\"temperature\\": 26.1}], do not include extra newlines, trailing commas, or any characters outside the JSON array.","1.2.2"],["The n_tokens of embed_input must be between 1 and","1.2.3"],["Cannot find tokenizer eos token id in model file","1.3.0"],["External embed callback failed, expected num_tokens:","1.3.0"],["Failed to initialize context","1.3.0"],["Failed to load prompt cache from","1.3.0"],["Failed to read key-value pairs","1.3.0"],["Failed to read the tensor data","1.3.0"],["Failed to tokenize multimodal_input.image.image_content.","1.3.0"],["Failed to tokenize multimodal_input.video.video_content.","1.3.0"],["For image input, patch_h * patch_w should be equal to n_image_tokens, but got patch_h[","1.3.0"],["For multimodal_input with <image>, image_start/image_end/image_content must be set in multimodal_input.image","1.3.0"],["For multimodal_input with <video>, video_start/video_end/video_content must be set in multimodal_input.video","1.3.0"],["For video input, patch_h * patch_w should be equal to n_frame_tokens, but got patch_h[","1.3.0"],["Malloc input_embed_data mem error","1.3.0"],["Model has no embedding layer and no embed callback provided.","1.3.0"],["Multi-batch does not support save_prompt_cache.","1.3.0"],["Start_pos and end_pos are only valid when keep_history == 0 and the generation has been paused by returning 1 in the callback!","1.3.0"],["The context is not enough! history_s:","1.3.0"],["The image_embed of multimodal_input.image is empty","1.3.0"],["The length of prompt is greater than max context (prompt:","1.3.0"],["The magic does not match the current model[","1.3.0"],["The model version is too old, please use the latest toolkit to reconvert the model","1.3.0"],["The model\'s target_platform does not match the real platform","1.3.0"],["The n_frame_per_video of multimodal_input.video must be between 1 and","1.3.0"],["The n_frame_tokens of multimodal_input.video must be between 1 and","1.3.0"],["The n_image of multimodal_input.image must be between 1 and","1.3.0"],["The n_image_tokens of multimodal_input.image must be between 1 and","1.3.0"],["The n_video of multimodal_input.video must be between 1 and","1.3.0"],["The number of <image> tags (","1.3.0"],["The number of <video> tags (","1.3.0"],["The number of multimodal tokens must be less than","1.3.0"],["The video_embed of multimodal_input.video is empty","1.3.0"],["Token input requires internal embedding table or external embed callback","1.3.0"],["Tokenizer is unavailable (no internal tokenizer and no external tokenizer callback)","1.3.0"],["Tokenizer is unavailable: model has no internal tokenizer and no external tokenizer_callback provided.","1.3.0"],["Too many missing tensors, stopped after","1.3.0"],["Unsupported model architecture:","1.3.0"],["Wrong number of tensors, expected","1.3.0"],["Corrupted embed payload in prompt cache: len overflow","1.3.1"],["Failed to save prompt cache to \'","1.3.1"],["Failed to set CPU affinity! err=","1.3.1"],["Failed to tokenize multimodal_input.audio.audio_content.","1.3.1"],["For multimodal_input with <audio>, audio_start/audio_end/audio_content must be set in multimodal_input.audio","1.3.1"],["KV cache reuse failed: require full prefix match and cache_tokens < input_tokens. got cache=","1.3.1"],["Multimodal input must contain at least one <image>, <video> or <audio> tag.","1.3.1"],["The audio_embed of multimodal_input.audio is empty","1.3.1"],["The n_audio of multimodal_input.audio must be between 1 and","1.3.1"],["The n_audio_tokens of multimodal_input.audio must be between 1 and","1.3.1"],["The number of <audio> tags (","1.3.1"],["embed slot is too large to save into prompt cache","1.3.1"],["pthread_setaffinity_np() failed:","1.3.1"]]}')
+_cache = None
 
 # --------------------------------------------------------------------
 # from src/npuzoo/doctor.py
@@ -446,11 +682,16 @@ def collect(demo=False):
 
     p = _find_lib(["librknnrt.so"])
     info["rknnrt"] = {"path": p,
-                      "version": _lib_version(p, [rb"librknnrt version:\s*([\d.]+)"]) if p else None}
+                      "version": _lib_version(p, [rb"RKNN SDK \(version:\s*([\w.]+)",
+                                                  rb"librknnrt version:\s*([\d.]+)"]) if p else None}
+    # The runtime version is NOT in the "rkllm-runtime version: %s" line — that is a
+    # format string, filled in at runtime. The literal lives in the SDK banner:
+    #   RKLLM SDK (version: 1.3.1 | target: Linux | build: 20cd29809 2026-09-28 ...)
+    # Verified against every release tag from 1.1.0 to 1.3.1.
     p = _find_lib(["librkllmrt.so"])
     info["rkllmrt"] = {"path": p,
-                       "version": _lib_version(p, [rb"rkllm-runtime version:\s*([\d.]+\w*)",
-                                                   rb"rkllm[\w\- ]*version[:\s]+([\d.]+)"]) if p else None}
+                       "version": _lib_version(p, [rb"RKLLM SDK \(version:\s*([\w.]+)",
+                                                   rb"rkllm-runtime version:\s*([\d.]+\w*)"]) if p else None}
 
     govs = {_read(f) for f in glob.glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_governor")}
     govs.discard(None)
@@ -611,6 +852,7 @@ built from logs people posted publicly, so this works on anyone's log.
 import sys
 
 
+
 EXPLAIN_ICON = {BLOCKER: "✗", PROBLEM: "!", NOISE: "·"}
 EXPLAIN_LABEL = {BLOCKER: "blocker", PROBLEM: "problem", NOISE: "noise"}
 
@@ -664,6 +906,14 @@ def cmd_explain(path=None):
             print("   note       runtime %s vs toolkit %s — these should normally match."
                   % (v["runtime"], v["toolkit"]))
         print()
+
+    if "runtime" not in v:
+        guess, why = infer_runtime(text)
+        if guess:
+            print("Runtime version is not in this log, but it is at least %s:" % guess)
+            for stem, _ in why[:2]:
+                print('   "%s..." was introduced in %s' % (stem[:58], guess))
+            print()
 
     hits = scan(text)
     if looks_healthy(text):

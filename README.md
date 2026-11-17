@@ -16,6 +16,16 @@ $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR
 $ npuzoo run qwen3-1.7b   # run it on the NPU (or CPU, if that's honestly faster)
 ```
 
+`explain` can date a log that contains no version line at all. The runtime's
+message catalogue grew from 17 strings in v1.1.0 to 210 in v1.3.1, so the
+messages present in your log put a floor under the runtime that produced it:
+
+```
+$ printf 'E rkllm: Failed to allocate buffer for kv cache\n' | npuzoo explain
+Runtime version is not in this log, but it is at least 1.2.2:
+   "Failed to allocate buffer for kv cache..." was introduced in 1.2.2
+```
+
 ## Check your board right now — nothing to install
 
 ```
@@ -55,23 +65,30 @@ costs people days:
 
 Every package in the npuzoo registry is pinned to **chip × driver × runtime ×
 toolkit**, tested on real hardware, and ships with honest NPU-vs-CPU numbers.
-What `doctor` and `explain` assert is sourced in
-[docs/UPSTREAM.md](docs/UPSTREAM.md) — no claim in the code without a source.
+What `doctor` and `explain` assert is sourced:
+[docs/UPSTREAM.md](docs/UPSTREAM.md) for the ecosystem,
+[docs/compatibility.md](docs/compatibility.md) for the version tables (read out
+of the official runtime binaries at every release tag), and
+[docs/fixes.md](docs/fixes.md) for what to actually do. No claim in the code
+without a source.
 
 ## Status
 
 | Component | Status |
 |---|---|
 | `npuzoo doctor` (RK3588/RK3576/RK3562/RV1126B) | v0.1 — works now, calibrating against real boards |
-| `npuzoo explain` (log → diagnosis) | v0.1 — 11 failure signatures, each with a test fixture |
+| `npuzoo explain` (log → diagnosis) | v0.1 — 22 failure signatures, each with a test fixture |
+| runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
 | standalone one-file doctor | v0.1 — works now |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
 | `npuzoo run` (RKLLM backend) | stub — lands with the first model batch |
 | conversion pipeline (x86) | skeleton in `pipeline/` |
 | voice pipeline preset | planned |
 
-`doctor`'s thresholds are currently derived from public reports, not from
-boards we own. That is exactly what we need help with — see Community.
+Version and platform tables are read out of the official runtime binaries, so
+they are exact. The driver thresholds and the memory sizing still come from
+public reports rather than boards we own — that is what we most need help with;
+see Community.
 
 ## Install (dev)
 
@@ -79,7 +96,7 @@ boards we own. That is exactly what we need help with — see Community.
 pipx install .           # or: pip install -e .
 npuzoo doctor            # on a real board
 npuzoo doctor --demo     # anywhere, with simulated board data
-python -m pytest tests   # 35 tests, no hardware needed
+python -m pytest tests   # 55 tests, no hardware needed
 ```
 
 ## Supported boards (initial)

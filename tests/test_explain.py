@@ -80,3 +80,42 @@ def test_every_fixture_except_healthy_matches_something(name):
 def test_no_issue_fires_on_unrelated_text():
     noise = "Linux orangepi5 6.1.43-rockchip-rk3588 #1 SMP Fri Oct 10 10:00:00 UTC 2025 aarch64\n"
     assert scan(noise) == []
+
+
+# --- signatures taken from the runtime binaries themselves (v1.1.0 … v1.3.1) ---
+
+@pytest.mark.parametrize("line,expect", [
+    ("E rkllm: The rkllm-runtime version is lower than the rkllm-toolkit version. Please update rkllm-runtime to 1.2.3 or higher.",
+     "runtime-older-than-toolkit"),
+    ("W rkllm: The model version is too old, please use the latest toolkit to reconvert the model",
+     "model-too-old"),
+    ("E rkllm: The model's target_platform does not match the real platform",
+     "wrong-target-platform"),
+    ("E rkllm: An unsupported rope type was detected, please try upgrading the rkllm-runtime version.",
+     "unsupported-rope"),
+    ("E rkllm: Failed to allocate buffer for kv cache", "kv-cache-alloc-failed"),
+    ("E rkllm: Max_context[8192] must be less than the model's max_context_limit[4096]",
+     "context-too-small"),
+    ("E rkllm: Invalid magic number, got 3c21444f", "invalid-model-file"),
+    ("E rkllm: 32-bit systems only support models with weights smaller than 2GB",
+     "armhf-2gb-limit"),
+    ("W rkllm: Cannot find tokenizer eos token id in model file", "missing-eos-token"),
+    ("E rkllm: The model architecture GPTNeoX is not supported by rkllm",
+     "unsupported-architecture-runtime"),
+])
+def test_runtime_catalogue_signatures(line, expect):
+    assert expect in ids(line + "\n")
+
+
+def test_oom_weights_and_oom_kv_cache_are_distinguished():
+    """Different fixes: one means a smaller model, the other a smaller context."""
+    weights = ids("E RKNN: failed to allocate handle, ret: -1, errno: 12\n")
+    kv = ids("E rkllm: Failed to allocate buffer for kv cache\n")
+    assert "npu-oom" in weights and "kv-cache-alloc-failed" not in weights
+    assert "kv-cache-alloc-failed" in kv and "npu-oom" not in kv
+
+
+def test_mismatch_direction_is_identified_not_just_mismatch():
+    newer_model = ids("E rkllm: The rkllm-runtime version is lower than the rkllm-toolkit version. Please update rkllm-runtime to 1.3.0 or higher.\n")
+    older_model = ids("W rkllm: The model version is too old, please use the latest toolkit to reconvert the model\n")
+    assert newer_model != older_model

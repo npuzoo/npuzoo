@@ -194,6 +194,166 @@ ISSUES = [
                 "or re-run the whole command with sudo."],
     },
     {
+        "id": "runtime-older-than-toolkit",
+        "severity": BLOCKER,
+        "match": [r"rkllm-runtime version is lower than the rkllm-toolkit version"],
+        "title": "Runtime is older than the toolkit that built this model",
+        "why": (
+            "The precise form of the pairing problem, and the runtime tells you so outright: "
+            "the model was converted by a newer rkllm-toolkit than the librkllmrt.so on this "
+            "board. The message names the minimum runtime version you need."
+        ),
+        "fix": [
+            "Read the version it asks for from the message itself, then install that runtime.",
+            "Check what you have:  strings /usr/lib/librkllmrt.so | grep 'RKLLM SDK'",
+            "Upgrading the runtime is normally easier than re-converting the model.",
+        ],
+    },
+    {
+        "id": "model-too-old",
+        "severity": PROBLEM,
+        "match": [r"model version is too old, please use the latest toolkit"],
+        "title": "The .rkllm file predates this runtime",
+        "why": (
+            "The other direction: the runtime is newer than the file. Older model formats are "
+            "dropped over time, so a .rkllm someone published a year ago may simply no longer "
+            "load. Most community model repos never state which toolkit built their files."
+        ),
+        "fix": [
+            "Re-convert from the original weights with a toolkit matching your runtime.",
+            "Or install the older runtime the file was built for, if you can identify it.",
+        ],
+    },
+    {
+        "id": "wrong-target-platform",
+        "severity": BLOCKER,
+        "match": [r"model's target_platform does not match the real platform"],
+        "title": "This model was built for a different chip",
+        "why": (
+            "A .rkllm records its target chip. An RK3576 package will not run on RK3588 and "
+            "vice versa — the NPU layouts differ. Model repos frequently fail to say which "
+            "chip a file targets, so this is easy to hit by downloading the wrong one."
+        ),
+        "fix": [
+            "Check your chip:  npuzoo doctor",
+            "Then get the package built for it. npuzoo checks this before downloading.",
+        ],
+    },
+    {
+        "id": "unsupported-rope",
+        "severity": BLOCKER,
+        "match": [r"unsupported rope type was detected"],
+        "title": "Runtime too old for this model's positional encoding",
+        "why": (
+            "The model uses a RoPE variant this runtime does not implement. It is a capability "
+            "gap, not a configuration mistake — newer model families keep introducing these."
+        ),
+        "fix": ["Upgrade librkllmrt.so to the release that supports this model family.",
+                "If the newest runtime still refuses it, the model is not convertible yet."],
+    },
+    {
+        "id": "kv-cache-alloc-failed",
+        "severity": BLOCKER,
+        "match": [r"Failed to allocate buffer for kv cache",
+                  r"Failed to allocate compute buffers"],
+        "title": "Out of memory for the KV cache, not the weights",
+        "why": (
+            "The weights loaded; the context did not. The KV cache grows with max_context_len, "
+            "and it is allocated separately — which is why a model that 'fits' still dies when "
+            "you raise the context."
+        ),
+        "fix": [
+            "Lower max_context_len. Halving it roughly halves the cache.",
+            "Check free RAM at the moment of failure:  free -h",
+            "This is the first thing to try before concluding the model is too big.",
+        ],
+    },
+    {
+        "id": "context-too-small",
+        "severity": PROBLEM,
+        "match": [r"Max_context\[\d+\] must be less than the model's max_context_limit",
+                  r"The length of prompt is greater than max context",
+                  r"The context is not enough! history_s"],
+        "title": "Context length misconfigured or exceeded",
+        "why": (
+            "max_context_limit is baked in at conversion time; you cannot raise it at runtime "
+            "past that ceiling. Conversions before runtime 1.2.0 were commonly capped at 4096, "
+            "so an old package cannot be given a long context no matter what you pass."
+        ),
+        "fix": [
+            "The ceiling is printed at init as max_context_limit — you cannot exceed it.",
+            "To go higher, re-convert with a larger limit (1.2.0 and later support up to 16K).",
+            "If the prompt itself is too long, trim it or raise max_context within the ceiling.",
+        ],
+    },
+    {
+        "id": "invalid-model-file",
+        "severity": BLOCKER,
+        "match": [r"Invalid magic number, got",
+                  r"magic does not match the current model",
+                  r"Invalid rkllm model!"],
+        "title": "Not a valid .rkllm file",
+        "why": (
+            "Usually a truncated or partial download, a Git LFS pointer committed instead of "
+            "the real file, or an HTML error page saved under a .rkllm name."
+        ),
+        "fix": [
+            "Check the size and the first bytes:  ls -l model.rkllm && head -c 64 model.rkllm | xxd",
+            "A few hundred bytes of text means you downloaded a pointer or an error page.",
+            "Re-download and verify the checksum. npuzoo pull verifies sha256 for you.",
+        ],
+    },
+    {
+        "id": "unsupported-architecture-runtime",
+        "severity": BLOCKER,
+        "match": [r"model architecture \S+ is not supported by rkllm",
+                  r"Unsupported model architecture"],
+        "title": "Runtime does not support this architecture",
+        "why": "The runtime, not the converter, is refusing it. Pair with a toolkit/runtime that lists it.",
+        "fix": ["Upgrade both toolkit and runtime to a release that names this model family."],
+    },
+    {
+        "id": "armhf-2gb-limit",
+        "severity": BLOCKER,
+        "match": [r"32-bit systems only support models with weights smaller than 2GB"],
+        "title": "You are running a 32-bit userland",
+        "why": (
+            "The board is 64-bit but the OS image is armhf, which caps model weights at 2 GB. "
+            "Easy to miss, because everything else works."
+        ),
+        "fix": ["Confirm:  uname -m   (expect aarch64, not armv7l)",
+                "Reflash a 64-bit (arm64/aarch64) image. There is no workaround in userland."],
+    },
+    {
+        "id": "cpu-affinity-misconfigured",
+        "severity": PROBLEM,
+        "match": [r"number of enabled CPUs must be greater than or equal to the number of NPU cores",
+                  r"Expected The number of enabled CPUs between"],
+        "title": "CPU core mask does not fit the NPU core count",
+        "why": (
+            "RK3588 drives its 3 NPU cores from CPU threads, so the enabled-CPU mask has to be "
+            "at least as large as the NPU core count."
+        ),
+        "fix": ["Leave the CPU mask at its default unless you have measured a reason to change it.",
+                "If you must set it, enable at least as many CPUs as NPU cores in use."],
+    },
+    {
+        "id": "missing-eos-token",
+        "severity": PROBLEM,
+        "match": [r"Cannot find tokenizer eos token id in model file"],
+        "title": "No EOS token — generation will not stop cleanly",
+        "why": (
+            "Without an end-of-sequence id the model runs until it hits the context limit, which "
+            "looks like rambling or repetition rather than an error. A conversion-time problem, "
+            "surfacing at runtime."
+        ),
+        "fix": [
+            "Re-convert with a toolkit that reads this tokenizer correctly (1.3.0 added support",
+            "  for multiple EOS token ids).",
+            "As a stopgap, set a stop string in your client.",
+        ],
+    },
+    {
         "id": "init-failed",
         "severity": PROBLEM,
         "generic": True,          # suppressed when a specific blocker also matched

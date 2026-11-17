@@ -9,6 +9,7 @@ built from logs people posted publicly, so this works on anyone's log.
 import sys
 
 from .known_issues import scan, looks_healthy, REPO, BLOCKER, PROBLEM, NOISE
+from .fingerprint import infer_runtime
 
 EXPLAIN_ICON = {BLOCKER: "✗", PROBLEM: "!", NOISE: "·"}
 EXPLAIN_LABEL = {BLOCKER: "blocker", PROBLEM: "problem", NOISE: "noise"}
@@ -63,6 +64,14 @@ def cmd_explain(path=None):
             print("   note       runtime %s vs toolkit %s — these should normally match."
                   % (v["runtime"], v["toolkit"]))
         print()
+
+    if "runtime" not in v:
+        guess, why = infer_runtime(text)
+        if guess:
+            print("Runtime version is not in this log, but it is at least %s:" % guess)
+            for stem, _ in why[:2]:
+                print('   "%s..." was introduced in %s' % (stem[:58], guess))
+            print()
 
     hits = scan(text)
     if looks_healthy(text):
