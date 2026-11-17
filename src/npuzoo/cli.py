@@ -52,6 +52,25 @@ def _main(argv=None):
     ins.add_argument("--size", type=int, help="expected size in bytes")
     ins.add_argument("--json", action="store_true", help="machine-readable output")
 
+    fd = sub.add_parser("find", help="search community .rkllm files on Hugging Face and check they fit this board")
+    fd.add_argument("query", nargs="*", help="words to match, e.g. qwen3 1.7b")
+    fd.add_argument("--board", help="chip, e.g. rk3588 (auto-detected on a board)")
+    fd.add_argument("--runtime", help="librkllmrt version, e.g. 1.3.1 (auto-detected on a board)")
+    fd.add_argument("--all", action="store_true", help="also show files whose names say they will not load")
+    fd.add_argument("--limit", type=int, default=20, help="rows to show; 0 for all")
+    fd.add_argument("--index", default=None, help="community index URL or path")
+    fd.add_argument("--refresh", action="store_true", help="fetch the index again even if cached today")
+    fd.add_argument("--json", action="store_true", help="machine-readable output")
+
+    gt = sub.add_parser("get", help="download a community .rkllm file, verify it, and inspect it")
+    gt.add_argument("repo", help="Hugging Face repo, e.g. someone/qwen3-1.7b-rk3588")
+    gt.add_argument("path", help="file path inside the repo")
+    gt.add_argument("--board", help="chip, e.g. rk3588 (auto-detected on a board)")
+    gt.add_argument("--runtime", help="librkllmrt version (auto-detected on a board)")
+    gt.add_argument("--dir", default=None, help="where to save (default: ~/.npuzoo/community/<repo>)")
+    gt.add_argument("--index", default=None, help="community index URL or path")
+    gt.add_argument("--force", action="store_true", help="download even if the name says it will not load")
+
     args = p.parse_args(argv)
 
     if args.cmd == "doctor":
@@ -66,6 +85,14 @@ def _main(argv=None):
     if args.cmd == "explain":
         from .explain import cmd_explain
         return cmd_explain(args.logfile)
+    if args.cmd == "find":
+        from .community import cmd_find
+        return cmd_find(" ".join(args.query), board=args.board, runtime=args.runtime, index_src=args.index,
+                        show_all=args.all, limit=args.limit, as_json=args.json, refresh=args.refresh)
+    if args.cmd == "get":
+        from .community import cmd_get
+        return cmd_get(args.repo, args.path, board=args.board, runtime=args.runtime,
+                       index_src=args.index, dest=args.dir, force=args.force)
     if args.cmd == "inspect":
         from .inspect import cmd_inspect
         return cmd_inspect(args.file, board=args.board, runtime=args.runtime,

@@ -1,0 +1,47 @@
+name: community index
+
+# Rebuilds index/community.json from the Hugging Face API: every public .rkllm
+# file, with the size and SHA-256 Hugging Face publishes for it.
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"          # Mondays
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/build_community_index.py
+      - .github/workflows/community-index.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: community-index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: build the index
+        run: python tools/build_community_index.py --out index/community.json
+
+      - name: commit it if it changed
+        run: |
+          git add index/community.json
+          if git diff --cached --quiet; then
+            echo "index unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh community model index"
+          git pull --rebase origin main
+          git push origin HEAD:main

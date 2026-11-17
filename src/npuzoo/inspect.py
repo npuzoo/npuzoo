@@ -113,6 +113,62 @@ def sha256_of(path, chunk=4 * 1024 * 1024):
     return h.hexdigest()
 
 
+def check_claims(claimed, board=None, runtime=None):
+    """Check what a name claims (chip, weight format, toolkit) against a board and runtime.
+
+    Used by inspect for a file on disk and by find for files not yet downloaded.
+    """
+    findings = []
+
+    def add(status, check, detail, fix=None):
+        findings.append({"status": status, "check": check, "detail": detail, "fix": fix})
+
+    chip, dtype = claimed["chip"], claimed["dtype"]
+    if not chip and not dtype:
+        add(INFO, "filename", "The name does not say which chip or weight format it was built for.",
+            fix=["Ask the uploader, or load it on the board and run: npuzoo explain"])
+    if chip in ("rk1820", "rk1828", "rk182x"):
+        add(WARN, "target", "Built for the %s AI co-processor, not for the NPU inside RK3588/RK3576." % chip.upper())
+    elif chip:
+        spec = RK_CHIPS.get(chip)
+        if spec and not spec["rkllm"]:
+            add(FAIL, "target", "%s has no RKLLM support; no .rkllm model runs on it." % chip.upper(),
+                fix=["Use an RK3588, RK3576, RK3562 or RV1126B board for language models. See %s#boards" % DOC])
+        elif spec and dtype and dtype not in [d.split("_")[0] for d in spec["dtypes"]]:
+            add(FAIL, "weight format",
+                "The name says %s on %s. Rockchip publishes %s for %s only." % (
+                    dtype, chip.upper(), " / ".join(sorted(set(d.split("_")[0] for d in spec["dtypes"]))), chip.upper()),
+                fix=["Get a %s build of the model for %s." % (spec["dtypes"][0], chip.upper())])
+        elif spec and dtype:
+            add(PASS, "weight format", "%s%s is a published format for %s." % (
+                dtype, ("_" + claimed["group"]) if claimed["group"] else "", chip.upper()))
+    if claimed["group"]:
+        add(INFO, "weight format", "Group-wise quantization (%s) needs runtime 1.1.0 or newer." % claimed["group"])
+
+    if board:
+        b = board.lower()
+        if chip and chip not in ("rk1820", "rk1828", "rk182x") and not (b == chip or (b, chip) in (("rk3588s", "rk3588"), ("rk3588", "rk3588s"))):
+            add(FAIL, "target", "The name says %s, but this board is %s. The runtime will refuse it with "
+                "\"The model's target_platform does not match the real platform\"." % (chip.upper(), b.upper()),
+                fix=["Get the %s build of this model." % b.upper()])
+
+    tk = claimed["toolkit"]
+    if tk and runtime:
+        if _ver(tk) and _ver(runtime) and _ver(tk) > _ver(runtime):
+            add(FAIL, "versions", "The name says toolkit %s, newer than runtime %s. The runtime will refuse it." % (tk, runtime),
+                fix=["Upgrade the runtime to %s or newer, or get a build made with toolkit %s." % (tk, runtime)])
+        elif _ver(tk) and _ver(runtime) and _ver(tk)[:2] < _ver(runtime)[:2]:
+            add(WARN, "versions",
+                "The name says toolkit %s; your runtime is %s. Rockchip does not document which older "
+                "models newer runtimes still load. If you see 'The model version is too old', re-convert." % (tk, runtime))
+        elif _ver(tk) and _ver(runtime):
+            add(PASS, "versions", "Toolkit %s in the name fits runtime %s." % (tk, runtime))
+    elif not tk:
+        add(INFO, "versions", "The toolkit version is not in the name and is not readable from the file. "
+            "The runtime prints it when it loads the model; send that log to: npuzoo explain")
+    return findings
+
+
 def inspect_file(path, board=None, runtime=None, expect_sha256=None, expect_size=None, name=None):
     """Return a list of findings: dicts with status, check, detail, fix."""
     findings = []
@@ -195,49 +251,7 @@ def inspect_file(path, board=None, runtime=None, expect_sha256=None, expect_size
                 fix=["Download it again; on Hugging Face the expected value is the LFS 'oid sha256' of the file."])
 
     # What the filename claims, checked against what the chip can do.
-    chip, dtype = claimed["chip"], claimed["dtype"]
-    if not chip and not dtype:
-        add(INFO, "filename", "The name does not say which chip or weight format it was built for.",
-            fix=["Ask the uploader, or load it on the board and run: npuzoo explain"])
-    if chip in ("rk1820", "rk1828", "rk182x"):
-        add(WARN, "target", "Built for the %s AI co-processor, not for the NPU inside RK3588/RK3576." % chip.upper())
-    elif chip:
-        spec = RK_CHIPS.get(chip)
-        if spec and not spec["rkllm"]:
-            add(FAIL, "target", "%s has no RKLLM support; no .rkllm model runs on it." % chip.upper(),
-                fix=["Use an RK3588, RK3576, RK3562 or RV1126B board for language models. See %s#boards" % DOC])
-        elif spec and dtype and dtype not in [d.split("_")[0] for d in spec["dtypes"]]:
-            add(FAIL, "weight format",
-                "The name says %s on %s. Rockchip publishes %s for %s only." % (
-                    dtype, chip.upper(), " / ".join(sorted(set(d.split("_")[0] for d in spec["dtypes"]))), chip.upper()),
-                fix=["Get a %s build of the model for %s." % (spec["dtypes"][0], chip.upper())])
-        elif spec and dtype:
-            add(PASS, "weight format", "%s%s is a published format for %s." % (
-                dtype, ("_" + claimed["group"]) if claimed["group"] else "", chip.upper()))
-    if claimed["group"]:
-        add(INFO, "weight format", "Group-wise quantization (%s) needs runtime 1.1.0 or newer." % claimed["group"])
-
-    if board:
-        b = board.lower()
-        if chip and chip not in ("rk1820", "rk1828", "rk182x") and not (b == chip or (b, chip) in (("rk3588s", "rk3588"), ("rk3588", "rk3588s"))):
-            add(FAIL, "target", "The name says %s, but this board is %s. The runtime will refuse it with "
-                "\"The model's target_platform does not match the real platform\"." % (chip.upper(), b.upper()),
-                fix=["Get the %s build of this model." % b.upper()])
-
-    tk = claimed["toolkit"]
-    if tk and runtime:
-        if _ver(tk) and _ver(runtime) and _ver(tk) > _ver(runtime):
-            add(FAIL, "versions", "The name says toolkit %s, newer than runtime %s. The runtime will refuse it." % (tk, runtime),
-                fix=["Upgrade the runtime to %s or newer, or get a build made with toolkit %s." % (tk, runtime)])
-        elif _ver(tk) and _ver(runtime) and _ver(tk)[:2] < _ver(runtime)[:2]:
-            add(WARN, "versions",
-                "The name says toolkit %s; your runtime is %s. Rockchip does not document which older "
-                "models newer runtimes still load. If you see 'The model version is too old', re-convert." % (tk, runtime))
-        elif _ver(tk) and _ver(runtime):
-            add(PASS, "versions", "Toolkit %s in the name fits runtime %s." % (tk, runtime))
-    elif not tk:
-        add(INFO, "versions", "The toolkit version is not in the name and is not readable from the file. "
-            "The runtime prints it when it loads the model; send that log to: npuzoo explain")
+    findings.extend(check_claims(claimed, board=board, runtime=runtime))
     return findings
 
 

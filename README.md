@@ -13,6 +13,7 @@ npuzoo packages it.
 $ npuzoo doctor           # board, kernel, NPU driver, runtime libs — and how to fix them
 $ npuzoo explain err.log  # paste a failing RKLLM/RKNN log, get the actual cause
 $ npuzoo inspect m.rkllm  # before copying: is it really a model, for this chip, for this runtime?
+$ npuzoo find qwen3 1.7b  # community .rkllm files on Hugging Face that fit YOUR board and runtime
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
 $ npuzoo run qwen3-1.7b   # run it on the NPU (or CPU, if that's honestly faster)
 ```
@@ -51,6 +52,31 @@ usual suspects:
 python3 npuzoo-doctor.py --inspect qwen3-4b-rk3588-w8a8.rkllm --board rk3588 --runtime 1.3.1
 ```
 
+## Find a model someone already converted
+
+Hundreds of people publish `.rkllm` files on Hugging Face. Which of them load on
+your board is the part nobody tells you before a 2 GB download.
+
+```
+$ npuzoo find qwen3 1.7b --board rk3588 --runtime 1.2.1     # (example repos)
+    REPO                               FILE                                  GB TOOLKIT  UPDATED     DL/30d
+  ✓ someone/Qwen3-1.7B-rk3588          Qwen3-1.7B-rk3588-w8a8-1.2.1.rkllm   2.3 1.2.1    2026-10-03     912
+  ? other/Qwen3-1.7B-NPU               model.rkllm                          2.1 ?        2026-09-12    4000
+
+  3 file(s) hidden because their names say they will not load here (--all shows them).
+
+  ✓ name fits   ? name does not say enough   ✗ will not load
+  Get one:  npuzoo get someone/Qwen3-1.7B-rk3588 Qwen3-1.7B-rk3588-w8a8-1.2.1.rkllm
+```
+
+On a board, `--board` and `--runtime` are detected for you.
+
+`get` downloads from the author's repo (resumable; `HF_ENDPOINT=https://hf-mirror.com`
+works), checks size and SHA-256 against what Hugging Face published, then runs
+`inspect`. The index of every public `.rkllm` file is rebuilt weekly — see
+[index/README.md](index/README.md). These files are their authors' work and are
+not tested by us; the verdicts come from what the file names claim.
+
 ## Why
 
 Rockchip ships plenty of capability — RKLLM is at v1.3.1 and supports Qwen3.5,
@@ -88,8 +114,9 @@ without a source.
 | `npuzoo doctor` (RK3588/RK3576/RK3562/RV1126B) | v0.1 — works now, calibrating against real boards |
 | `npuzoo explain` (log → diagnosis) | v0.1 — 23 failure signatures; 7 real logs as regression fixtures |
 | `npuzoo inspect` (model file → can it load?) | v0.1 — LFS pointers, error pages, GGUF, third-party `.rkllm`, wrong chip or format, version order, checksum. See [docs/rkllm-format.md](docs/rkllm-format.md) |
+| `npuzoo find` / `npuzoo get` (community files) | v0.1 — weekly index of every public `.rkllm` on Hugging Face; fit judged from names, downloads verified |
 | runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
-| standalone one-file doctor | v0.1 — works now |
+| standalone one-file doctor | v0.1 — works now; includes `--explain` and `--inspect` |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
 | `npuzoo run` (RKLLM backend) | stub — lands with the first model batch |
 | conversion pipeline (x86) | skeleton in `pipeline/` |

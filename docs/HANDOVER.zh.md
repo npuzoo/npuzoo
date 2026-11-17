@@ -1,27 +1,33 @@
 # 交接说明（给回国后接手的你，或任何协作者）
 
-更新时间：2026-11-17 下午（第三轮：加入 npuzoo inspect）
+更新时间：2026-11-17 晚（第三轮：inspect、find/get、许可条款）
 
 ## 仓库结构
 
 ```
 src/npuzoo/
-  cli.py            命令入口：doctor / explain / inspect / pull / list / run(stub)
+  cli.py            命令入口：doctor / explain / inspect / find / get / pull / list / run(stub)
   doctor.py         板子体检。每条检查规则的依据都在 docs/UPSTREAM.md 里，有出处
   known_issues.py   真实失败特征库：23 条，全部来自公开渠道别人贴过的日志
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
   fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
   inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
+  community.py      npuzoo find / get：搜 HF 上别人转好的 .rkllm，按文件名判断能不能在你的板子上跑；下载校验
   registry.py       包索引格式 + pull（本地索引可用，托管注册表未做）
 standalone/
   npuzoo-doctor.py  单文件免安装版（生成物，勿手改），curl | python3 即可跑
 tools/
   build_standalone.py  从 src/ 生成上面那个文件；有防命名冲突检查
+  build_community_index.py  从 HF 接口生成 index/community.json（每周由 GitHub Actions 自动跑）
+index/
+  community.json    HF 上全部公开 .rkllm 文件的清单（自动生成，勿手改）
 tests/
   test_doctor.py    体检规则，对应真实世界配置
   test_explain.py   日志识别回归测试
   test_fingerprint.py  运行时版本反推
   test_inspect.py   模型文件检查（LFS 指针、错误页、GGUF、第三方格式、芯片与版本）
+  test_community.py find / get：判断、排序、断点续传、校验
+  test_index_builder.py  索引生成脚本（用录下来的接口格式，不联网）
   logs/             7 个真实日志夹具（出处见 docs/UPSTREAM.md）
 pipeline/           x86 转换 + 板上跑分脚本（骨架）
 docs/
@@ -29,6 +35,7 @@ docs/
   compatibility.md  版本配对规则和四种出错方式
   fixes.md          每条已知故障的修法
   rkllm-format.md   .rkllm 文件头能读什么、故意不破解什么、inspect 查什么
+  licensing.md      瑞芯微两套 SDK 的许可条款读下来的结论：能发什么、不能发什么
   outreach/first-post.md  论坛/Reddit 首发帖草稿和回帖守则
 ```
 
@@ -36,10 +43,11 @@ docs/
 
 ```
 pip install -e .
-python -m pytest tests          # 81 个测试，不需要硬件
+python -m pytest tests          # 118 个测试，不需要硬件
 npuzoo doctor --demo
 npuzoo explain tests/logs/version-mismatch.log
 npuzoo inspect some-model.rkllm --board rk3588 --runtime 1.3.1
+npuzoo find qwen3 --board rk3588 --runtime 1.2.1   # 需要 index/community.json 已生成
 python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 ```
 
