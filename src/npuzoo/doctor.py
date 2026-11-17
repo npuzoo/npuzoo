@@ -262,7 +262,8 @@ def diagnose(info):
         add(OK, "librknnrt", r["path"] + (" (v%s)" % r["version"] if r.get("version") else " (version unknown)"))
     else:
         add(WARN, "librknnrt", "librknnrt.so not found — RKNN vision/audio models won't run.",
-            fix="npuzoo installs it per package; or see %s#rknnrt" % DOC)
+            fix="get it from Rockchip (rknn-toolkit2, rknpu2/runtime/Linux/librknn_api/aarch64/) "
+                "or your board vendor's image; see %s#rknnrt" % DOC)
 
     r = info.get("rkllmrt") or {}
     if r.get("path"):

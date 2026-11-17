@@ -90,6 +90,13 @@ board image.
 `librknnrt.so` runs the vision and audio encoders. Missing it does not stop a
 text LLM, but multimodal packages will not work.
 
+Get it from Rockchip, not from a third party: in the
+[rknn-toolkit2](https://github.com/airockchip/rknn-toolkit2) repository it is
+`rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so`; copy it to `/usr/lib/`.
+Many board vendors' images already include it. npuzoo does not ship this
+library — its licence does not clearly allow redistributing it unmodified
+(see [licensing.md](licensing.md)).
+
 A `.rknn` file built by a newer toolkit than your `librknnrt.so` usually still
 runs, with a warning — but accuracy is not guaranteed and some operators fall
 back. Keep the pair together:
