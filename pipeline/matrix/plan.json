@@ -1,5 +1,5 @@
 {
- "about": "Combinations the next run converts. Edit this list and push to main to (re)run them; their results replace the old ones for the same model and toolkit in docs/conversion-matrix.md, and every other result is kept. Toolkit = rkllm-toolkit release tag without 'release-v'.",
+ "about": "Combinations the next run converts. Edit this list and push to main to (re)run them; their results replace the old ones for the same model and toolkit in docs/conversion-matrix.md, and every other result is kept. Toolkit = rkllm-toolkit release tag without 'release-v'. also_collect_run_id: results of that earlier run (its uploaded artifacts) are merged in too; null for none.",
  "runs": [
   {
    "toolkit": "1.1.4",
@@ -25,5 +25,6 @@
    "toolkit": "1.1.4",
    "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
   }
- ]
+ ],
+ "also_collect_run_id": 44103468844
 }

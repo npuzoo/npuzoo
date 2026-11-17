@@ -25,10 +25,13 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       include: ${{ steps.p.outputs.include }}
+      earlier: ${{ steps.p.outputs.earlier }}
     steps:
       - uses: actions/checkout@v4
       - id: p
-        run: echo "include=$(python3 -c 'import json; print(json.dumps(json.load(open("pipeline/matrix/plan.json"))["runs"]))')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "include=$(python3 -c 'import json; print(json.dumps(json.load(open("pipeline/matrix/plan.json"))["runs"]))')" >> "$GITHUB_OUTPUT"
+          echo "earlier=$(python3 -c 'import json; print(json.load(open("pipeline/matrix/plan.json")).get("also_collect_run_id") or "")')" >> "$GITHUB_OUTPUT"
 
   convert:
     needs: plan
@@ -96,16 +99,28 @@ jobs:
           retention-days: 30
 
   collect:
-    needs: convert
+    needs: [plan, convert]
     if: always()
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # results an earlier run uploaded but could not commit (plan.json: also_collect_run_id);
+      # downloaded first, so this run's results win where both have the same pair
+      - uses: actions/download-artifact@v4
+        if: needs.plan.outputs.earlier != ''
+        continue-on-error: true
+        with:
+          path: results
+          pattern: result-*
+          merge-multiple: true
+          run-id: ${{ needs.plan.outputs.earlier }}
+          github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
           path: results
