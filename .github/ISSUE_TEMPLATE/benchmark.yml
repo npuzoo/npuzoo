@@ -1,0 +1,25 @@
+name: Benchmark result / 测速结果
+description: The JSON that `npuzoo bench` wrote on your board. npuzoo bench 在你板子上生成的 JSON。
+title: "[bench] "
+labels: ["benchmark"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Real numbers from real boards are what this project is for. The JSON has no personal data: board, kernel,
+        driver and runtime versions, the model file's name, size and SHA-256, and the timings.
+        真机真数据是这个项目的意义。JSON 里没有个人信息：只有板子、内核、驱动和运行时版本，模型文件名、大小、SHA-256 和测速结果。
+
+        `npuzoo bench your-model.rkllm`
+  - type: textarea
+    id: json
+    attributes:
+      label: npuzoo bench JSON
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything unusual / 其他情况
+      description: Cooling, power supply, other load on the board, clocks pinned or not. 散热、电源、板上其他负载、是否锁频。

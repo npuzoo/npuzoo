@@ -21,6 +21,7 @@ $ npuzoo support qwen3    # which RKLLM release added it (toolkit AND runtime), 
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
 $ npuzoo run m.rkllm      # chat on the NPU; prints prefill/generate tok/s from the runtime itself
 $ npuzoo serve m.rkllm    # OpenAI chat API on :8080 — Home Assistant, Open WebUI, openai clients
+$ npuzoo bench m.rkllm    # the same two workloads on every board; writes a JSON worth sharing
 ```
 
 `explain` can date a log that contains no version line at all. The runtime's

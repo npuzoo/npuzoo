@@ -75,7 +75,7 @@ def cpus_for(chip):
 
 
 def open_session(model, lib_path=None, force=False, context=4096, max_new_tokens=1024,
-                 temperature=0.8, top_k=1, top_p=0.9, out=sys.stdout):
+                 temperature=0.8, top_k=1, top_p=0.9, out=sys.stdout, ignore_eos=False):
     path, version, profile = find_runtime(lib_path)
     info = collect()
     chip = info.get("chip")
@@ -86,10 +86,14 @@ def open_session(model, lib_path=None, force=False, context=4096, max_new_tokens
     out.write("Loading %s on %s with runtime %s ...\n" % (os.path.basename(model), (chip or "?").upper(), version))
     t0 = time.time()
     s = Session(lib, profile, model, max_context_len=context, max_new_tokens=max_new_tokens,
-                temperature=temperature, top_k=top_k, top_p=top_p, cpus_mask=mask, cpus_num=num)
-    out.write("Loaded in %.1f s.\n" % (time.time() - t0))
+                temperature=temperature, top_k=top_k, top_p=top_p, cpus_mask=mask, cpus_num=num,
+                ignore_eos=ignore_eos)
+    load_s = time.time() - t0
+    out.write("Loaded in %.1f s.\n" % load_s)
     return s, {"chip": chip, "runtime": version, "model": model, "governor": info.get("cpu_governor"),
-               "npu_governor": info.get("npu_governor")}
+               "npu_governor": info.get("npu_governor"), "board": info.get("board"),
+               "kernel": info.get("kernel"), "npu_driver": info.get("npu_driver"), "mem_gb": info.get("mem_gb"),
+               "profile": profile, "load_s": round(load_s, 2)}
 
 
 def perf_line(perf, meta=None):

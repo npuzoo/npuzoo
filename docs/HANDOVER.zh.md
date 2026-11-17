@@ -6,13 +6,14 @@
 
 ```
 src/npuzoo/
-  cli.py            命令入口：doctor / explain / inspect / find / get / support / pull / list / run / serve
+  cli.py            命令入口：doctor / explain / inspect / find / get / support / pull / list / run / serve / bench
   doctor.py         板子体检。每条检查规则的依据都在 docs/UPSTREAM.md 里，有出处
   known_issues.py   真实失败特征库：25 条，全部来自公开日志（其中 2 条来自本仓库转换矩阵的公开运行记录）
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
   fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
   inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
   rkllm_rt.py       librkllmrt.so 的 ctypes 绑定，两套结构体布局（1.2.1–1.2.3、1.3.x），照官方头文件写
+  bench.py          npuzoo bench：固定两组测试（对话、长提示），预热一次后取中位数，记录调频器，输出可分享的 JSON
   runner.py         npuzoo run / serve：上板前先 inspect；serve 提供 OpenAI 接口，多轮对话映射到运行时的历史
   pc.py             npuzoo doctor --pc：检查用来转换模型的 x86 电脑（工具版本、Python、依赖锁定、内存够转多大的模型）
   models.py         各版本 RKLLM 支持哪些模型系列和芯片（来自瑞芯微 CHANGELOG）；npuzoo support，inspect/find/explain 都用它

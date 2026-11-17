@@ -271,7 +271,7 @@ class Session(object):
 
     def __init__(self, lib, profile, model_path, max_context_len=4096, max_new_tokens=1024,
                  top_k=1, top_p=0.9, temperature=0.8, repeat_penalty=1.1, cpus_mask=CPU_BIG, cpus_num=4,
-                 embed_flash=1):
+                 embed_flash=1, ignore_eos=False):
         if profile not in PROFILES:
             raise RuntimeError_("unsupported runtime layout %r" % profile)
         self.lib, self.profile = lib, profile
@@ -289,6 +289,8 @@ class Session(object):
         param.top_k, param.top_p, param.temperature = int(top_k), float(top_p), float(temperature)
         param.repeat_penalty = float(repeat_penalty)
         param.skip_special_token = True
+        if ignore_eos and "ignore_eos_token" in dict(P["param"]._fields_):
+            param.ignore_eos_token = True      # 1.3+: fixed-length output, for benchmarks
         param.is_async = False
         param.n_keep = -1
         param.extend_param.base_domain_id = 0

@@ -53,6 +53,14 @@ def _main(argv=None):
     run.add_argument("--json", action="store_true", help="answer and timings as JSON")
     model_opts(run)
 
+    bn = sub.add_parser("bench", help="measure a .rkllm model the same way on every board; writes a shareable JSON")
+    bn.add_argument("name", help="a .rkllm file, or a pulled package name")
+    bn.add_argument("--repeats", type=int, default=3, help="measured runs per workload (default 3)")
+    bn.add_argument("--out", help="where to write the JSON report")
+    bn.add_argument("--lib", help="path to librkllmrt.so")
+    bn.add_argument("--context", type=int, default=4096)
+    bn.add_argument("--force", action="store_true", help="load even if inspect says it will fail")
+
     sv = sub.add_parser("serve", help="serve a .rkllm model over the OpenAI chat API")
     sv.add_argument("name", help="a .rkllm file, or a pulled package name")
     sv.add_argument("--host", default="0.0.0.0")
@@ -134,6 +142,10 @@ def _main(argv=None):
         return cmd_run(args.name, prompt=args.prompt, lib_path=args.lib, force=args.force, context=args.context,
                        max_new_tokens=args.max_new_tokens, temperature=args.temperature, think=args.think,
                        as_json=args.json)
+    if args.cmd == "bench":
+        from .bench import cmd_bench
+        return cmd_bench(args.name, repeats=args.repeats, lib_path=args.lib, force=args.force,
+                         context=args.context, out_path=args.out)
     if args.cmd == "serve":
         from .runner import cmd_serve
         return cmd_serve(args.name, host=args.host, port=args.port, lib_path=args.lib, force=args.force,
