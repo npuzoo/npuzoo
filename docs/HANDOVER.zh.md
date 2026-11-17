@@ -35,6 +35,9 @@ tests/
   test_index_builder.py  索引生成脚本（用录下来的接口格式，不联网）
   logs/             9 个真实日志夹具（出处见 docs/UPSTREAM.md）
 pipeline/           x86 转换 + 板上跑分脚本（骨架）
+  matrix/           转换矩阵：在 GitHub 免费 CPU 机器上用各版 rkllm-toolkit 转模型，记录成败（不上板）
+matrix/
+  conversion.json   转换矩阵原始结果（自动生成）
 docs/
   UPSTREAM.md       ★ 最重要的文件：RKLLM 生态的核实事实 + 竞品清单，全部带出处
   compatibility.md  版本配对规则和四种出错方式
@@ -65,6 +68,12 @@ python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 2. 换 Armbian 再跑一次，存输出
 3. 对照输出修 doctor.py 里推错的规则（尤其 _fits 的内存估算和 governor 路径）
 4. 每修一条，在 tests/ 里加一个对应夹具
+
+## 转换矩阵（已在 GitHub Actions 上跑，不需要自己的 x86 机器）
+
+改 pipeline/matrix/ 或 .github/workflows/conversion-matrix.yml 并推到 main 就会重跑；
+结果自动提交到 docs/conversion-matrix.md 和 matrix/conversion.json。GitHub 免费机器是 4 核 16G，
+只适合 2B 以下的模型；更大的模型要自己的机器。
 
 ## x86 机器到手那天（云主机即可，32G 内存）
 

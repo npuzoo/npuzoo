@@ -33,6 +33,7 @@ import time
 
 CORES = {"rk3588": 3, "rk3576": 2, "rk3562": 1, "rv1126b": 1}
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+PROGRESS = re.compile(r"^\s*\[[=> ]*\]\s*\d+/\d+")   # the toolkit's "[====>   ] 301/597 (50%)" bars
 EXC = re.compile(r"^(?:[\w.]+\.)?(\w*(?:Error|Exception|Exit))\b:?\s*(.*)$")
 
 # Calibration prompts: our own, neutral, half English and half Chinese, the
@@ -102,7 +103,8 @@ def parse_child(text):
             err = line.strip()
         elif line.startswith("RETURN "):
             err = "toolkit returned %s" % line.split(" ", 1)[1]
-    tail = [line for line in clean if line.strip() and not line.startswith(("STAGE ", "PEAK_RSS_KB "))][-30:]
+    tail = [line for line in clean if line.strip() and not line.startswith(("STAGE ", "PEAK_RSS_KB "))
+            and not PROGRESS.match(line)][-30:]
     return {"stage": stage, "peak_kb": peak, "ok": ok, "error": err, "tail": tail}
 
 

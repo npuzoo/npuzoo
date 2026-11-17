@@ -84,6 +84,12 @@ def test_parse_child_failure_keeps_stage_and_exception():
     assert info["error"] == "ValueError: Unsupported model architecture: Foo"
 
 
+def test_parse_child_drops_progress_bars_from_tail():
+    out = "STAGE build\n" + "".join("[==>   ] %d/597 (1%%)\n" % i for i in range(100)) + "RuntimeError: boom\n"
+    info = conv.parse_child(out)
+    assert info["tail"] == ["RuntimeError: boom"] and info["error"] == "RuntimeError: boom"
+
+
 def test_parse_child_return_code():
     info = conv.parse_child("STAGE load\nRETURN -1 from load_huggingface\n")
     assert info["stage"] == "load" and "returned -1" in info["error"]

@@ -128,7 +128,7 @@ without a source.
 | standalone one-file doctor | v0.1 — works now; includes `--explain`, `--inspect` and `--pc` |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
 | `npuzoo run` / `npuzoo serve` (RKLLM runtime 1.2.1–1.3.1) | v0.2 — written against Rockchip's headers; every struct size and offset checked in CI for aarch64 (`tools/check_rkllm_abi.py`); **not yet run on a board** |
-| conversion pipeline (x86) | skeleton in `pipeline/` |
+| conversion matrix (x86, no board) | runs in GitHub Actions: six models × toolkit 1.1.4 / 1.2.3 / 1.3.1 × RK3588 / RK3576 formats → [docs/conversion-matrix.md](docs/conversion-matrix.md) |
 | voice pipeline preset | planned |
 
 Version and platform tables are read out of the official runtime binaries, so
