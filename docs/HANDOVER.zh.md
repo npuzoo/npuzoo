@@ -6,12 +6,13 @@
 
 ```
 src/npuzoo/
-  cli.py            命令入口：doctor / explain / inspect / find / get / pull / list / run(stub)
+  cli.py            命令入口：doctor / explain / inspect / find / get / support / pull / list / run(stub)
   doctor.py         板子体检。每条检查规则的依据都在 docs/UPSTREAM.md 里，有出处
   known_issues.py   真实失败特征库：25 条，全部来自公开日志（其中 2 条来自本仓库转换矩阵的公开运行记录）
   explain.py        npuzoo explain：贴一段报错日志，告诉你真正原因和修法
   fingerprint.py    从不带版本号的日志反推运行时版本（data/runtime_fingerprints.json）
   inspect.py        npuzoo inspect：模型文件拷到板子前先查一遍能不能加载
+  models.py         各版本 RKLLM 支持哪些模型系列和芯片（来自瑞芯微 CHANGELOG）；npuzoo support，inspect/find/explain 都用它
   community.py      npuzoo find / get：搜 HF 上别人转好的 .rkllm，按文件名判断能不能在你的板子上跑；下载校验
   registry.py       包索引格式 + pull（本地索引可用，托管注册表未做）
 standalone/

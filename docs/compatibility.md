@@ -112,3 +112,63 @@ such. If you have a driver/runtime pair that contradicts the table — especiall
 a working setup below 0.9.6, or a failure at 0.9.8 — that is worth a
 [discussion](https://github.com/npuzoo/npuzoo/discussions). Corrections to this
 page are the most valuable contribution right now.
+
+## Model families by release
+
+From Rockchip's changelog ([CHANGELOG.md at 1.3.1](https://github.com/airockchip/rknn-llm/blob/release-v1.3.1/CHANGELOG.md)) and the supported list in its README.
+A family needs a toolkit *and* a board runtime of that release or newer. `npuzoo support <name>`
+prints the same table; `inspect`, `find` and `explain` use it. Generated from `src/npuzoo/models.py`.
+
+| Model family | First RKLLM release |
+|---|---|
+| Qwen3.5 | 1.3.0 |
+| Qwen3-VL | 1.2.3 |
+| Qwen2.5-VL | 1.2.0 |
+| Qwen2-VL | listed in 1.3.1; first release not stated |
+| Qwen3 | 1.2.1 |
+| Qwen2 / Qwen2.5 | 1.0.0 |
+| Qwen | 1.0.0 |
+| Gemma 4 | 1.3.0 |
+| Gemma 3n | 1.2.2 |
+| Gemma 3 | 1.2.0 |
+| Gemma 2 | 1.1.0 |
+| Gemma | 1.0.1 |
+| SmolLM3 | 1.3.0 |
+| SmolVLM | listed in 1.3.1; first release not stated |
+| InternVL3.5 | 1.2.3 |
+| InternVL3 | 1.2.2 |
+| InternVL2 | 1.2.0 |
+| InternLM2 | 1.0.1 |
+| MiniCPM-V | listed in 1.3.1; first release not stated |
+| MiniCPM4 | 1.2.1 |
+| MiniCPM3 | 1.1.0 |
+| MiniCPM | 1.0.1 |
+| Phi-3 | 1.0.1 |
+| Phi-2 | 1.0.0 |
+| ChatGLM3 | 1.0.1 |
+| TeleChat2 | listed in 1.3.1; first release not stated |
+| RWKV7 | 1.2.1 |
+| Janus | 1.2.0 |
+| DeepSeek-OCR | 1.2.3 |
+| LFM2.5-VL | 1.3.1 |
+| Spark-X2.5 | 1.3.1 |
+| Llama 3 | 1.1.0 |
+| Llama / TinyLlama | 1.0.0 |
+
+| Chip | First RKLLM release |
+|---|---|
+| RK3588 | 1.0.0 |
+| RK3588S | 1.0.0 |
+| RK3576 | 1.0.0 |
+| RK3562 | 1.2.0 |
+| RV1126B | 1.2.1 |
+
+| Feature | First RKLLM release |
+|---|---|
+| group-wise quantization (w4a16_g32/64/128, w8a8_g128/256/512) | 1.1.0 |
+| GGUF conversion (q4_0, fp16) | 1.1.0 |
+| GRQ int4 quantization | 1.2.0 |
+| 16K context | 1.2.0 |
+| chat_template configuration | 1.2.0 |
+| function calling | 1.2.1 |
+| multiple EOS tokens | 1.3.0 |

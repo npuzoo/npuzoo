@@ -18,7 +18,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "npuzoo"
 OUT = ROOT / "standalone" / "npuzoo-doctor.py"
 
-MODULES = ["known_issues", "fingerprint", "doctor", "explain", "inspect"]
+MODULES = ["known_issues", "fingerprint", "doctor", "models", "explain", "inspect"]
 
 # package data a single file cannot read from disk, inlined instead
 EMBED = {"fingerprint": ("EMBEDDED", SRC / "data" / "runtime_fingerprints.json")}
@@ -104,6 +104,13 @@ def check(bundled):
     """Fail loudly rather than ship a broken one-liner."""
     import ast
     tree = ast.parse(bundled)
+
+    # relative imports are dropped when bundling, so "import x as y" would leave y undefined
+    for name in MODULES:
+        for line in (SRC / (name + ".py")).read_text().splitlines():
+            if re.match(r"\s*from \.[\w.]* import .*\bas\b", line):
+                raise SystemExit("%s.py renames a relative import (%s); the bundle cannot keep that"
+                                 % (name, line.strip()))
 
     # board images still ship old Pythons; f-strings are 3.6+, walrus is 3.8+
     for node in ast.walk(tree):

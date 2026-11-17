@@ -22,6 +22,7 @@ import urllib.request
 from . import USER_AGENT
 from .doctor import collect, FAIL, WARN
 from .inspect import parse_name, check_claims, inspect_file, PASS, INSPECT_ICON
+from .models import family_for_name
 
 INDEX_URL = "https://raw.githubusercontent.com/npuzoo/npuzoo/main/index/community.json"
 HOME = os.path.expanduser(os.environ.get("NPUZOO_HOME", "~/.npuzoo"))
@@ -88,10 +89,21 @@ def claims_for(entry):
     return claims
 
 
+def family_for_entry(entry):
+    """Model family from the file name, its folders, the repo name, then the base model."""
+    parts = [entry["path"].split("/")[-1]] + list(reversed(entry["path"].split("/")[:-1])) \
+        + [entry["repo"].split("/")[-1], entry.get("base_model") or ""]
+    for p in parts:
+        fam = family_for_name(p)
+        if fam:
+            return fam
+    return None
+
+
 def judge(entry, board=None, runtime=None):
     """(verdict, reasons) for loading this file on board with runtime."""
     claims = claims_for(entry)
-    findings = check_claims(claims, board=board, runtime=runtime)
+    findings = check_claims(claims, board=board, runtime=runtime, family=family_for_entry(entry))
     fails = [f["detail"] for f in findings if f["status"] == FAIL]
     if fails:
         return NO, fails

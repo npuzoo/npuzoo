@@ -71,6 +71,9 @@ def _main(argv=None):
     gt.add_argument("--index", default=None, help="community index URL or path")
     gt.add_argument("--force", action="store_true", help="download even if the name says it will not load")
 
+    sp = sub.add_parser("support", help="which RKLLM release added a model family or chip")
+    sp.add_argument("name", nargs="?", help="model or chip, e.g. qwen3, Qwen3ForCausalLM, rk3562")
+
     args = p.parse_args(argv)
 
     if args.cmd == "doctor":
@@ -85,6 +88,9 @@ def _main(argv=None):
     if args.cmd == "explain":
         from .explain import cmd_explain
         return cmd_explain(args.logfile)
+    if args.cmd == "support":
+        from .models import cmd_support
+        return cmd_support(args.name)
     if args.cmd == "find":
         from .community import cmd_find
         return cmd_find(" ".join(args.query), board=args.board, runtime=args.runtime, index_src=args.index,

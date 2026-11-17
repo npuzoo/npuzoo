@@ -6,10 +6,12 @@ built from logs people posted publicly, so this works on anyone's log.
     npuzoo explain board.log
     ./demo ... 2>&1 | npuzoo explain
 """
+import re
 import sys
 
 from .known_issues import scan, looks_healthy, REPO, BLOCKER, PROBLEM, NOISE
 from .fingerprint import infer_runtime
+from .models import family_for_arch, CHANGELOG_URL
 
 EXPLAIN_ICON = {BLOCKER: "✗", PROBLEM: "!", NOISE: "·"}
 EXPLAIN_LABEL = {BLOCKER: "blocker", PROBLEM: "problem", NOISE: "noise"}
@@ -32,6 +34,25 @@ def _versions(text):
         if m:
             found[key] = m.group(1)
     return found
+
+
+_ARCH = re.compile(r"(?:Not support|model architecture)\s+(\w+)")
+
+
+def arch_note(text):
+    """What Rockchip's changelog says about the architecture in the log."""
+    m = _ARCH.search(text)
+    if not m:
+        return []
+    arch = m.group(1)
+    fam = family_for_arch(arch)
+    if fam is None:
+        return ["%s is not in RKLLM's supported list as of 1.3.1, so no release converts it yet." % arch]
+    if fam["since"]:
+        return ["%s is %s, which Rockchip added in RKLLM %s. Use toolkit %s or newer, and the same" % (
+                    arch, fam["name"], fam["since"], fam["since"]),
+                "runtime version on the board. (%s)" % CHANGELOG_URL]
+    return ["%s is %s, listed as supported in RKLLM 1.3.1." % (arch, fam["name"])]
 
 
 def cmd_explain(path=None):
@@ -94,6 +115,9 @@ def cmd_explain(path=None):
         print(" %s [%s] %s" % (EXPLAIN_ICON[h["severity"]], EXPLAIN_LABEL[h["severity"]], h["title"]))
         print("   matched: %s" % h["evidence"])
         print("   %s" % h["why"])
+        if h["id"] in ("unsupported-architecture", "unsupported-architecture-runtime"):
+            for line in arch_note(text):
+                print("   " + line)
         for line in h["fix"]:
             print("     %s" % line)
         print()

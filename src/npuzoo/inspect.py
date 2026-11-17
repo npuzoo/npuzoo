@@ -25,6 +25,7 @@ import sys
 
 from .doctor import RK_CHIPS, WARN, FAIL, INFO, collect
 from .known_issues import REPO, DOC
+from .models import family_for_name, supports, PLATFORMS
 
 # Signature at offset 0 of Rockchip-format .rkllm files. Present in 43 of 44
 # public files sampled on 2026-11-17: June 2024 to November 2026, toolkit
@@ -113,7 +114,7 @@ def sha256_of(path, chunk=4 * 1024 * 1024):
     return h.hexdigest()
 
 
-def check_claims(claimed, board=None, runtime=None):
+def check_claims(claimed, board=None, runtime=None, family=None):
     """Check what a name claims (chip, weight format, toolkit) against a board and runtime.
 
     Used by inspect for a file on disk and by find for files not yet downloaded.
@@ -166,6 +167,25 @@ def check_claims(claimed, board=None, runtime=None):
     elif not tk:
         add(INFO, "versions", "The toolkit version is not in the name and is not readable from the file. "
             "The runtime prints it when it loads the model; send that log to: npuzoo explain")
+
+    # What Rockchip's changelog says each release supports (models.py).
+    since = (family or {}).get("since")
+    if since:
+        name = family["name"]
+        if runtime and supports(runtime, since) is False:
+            add(FAIL, "model family", "This looks like %s, which Rockchip added in RKLLM %s. "
+                "Runtime %s cannot run it." % (name, since, runtime),
+                fix=["Upgrade the board's runtime (librkllmrt.so) to %s or newer, with a model built by the "
+                     "same toolkit version." % since])
+        if tk and supports(tk, since) is False:
+            add(WARN, "model family", "The name says toolkit %s, but Rockchip added %s in %s, so the version in "
+                "the name is probably wrong. The runtime prints the real one when it loads the model." % (tk, name, since))
+    if board and runtime:
+        b = board.lower()
+        psince = PLATFORMS.get(b)
+        if psince and supports(runtime, psince) is False:
+            add(FAIL, "board", "%s support arrived in RKLLM %s; runtime %s predates it." % (b.upper(), psince, runtime),
+                fix=["Upgrade the runtime to %s or newer." % psince])
     return findings
 
 
@@ -251,7 +271,8 @@ def inspect_file(path, board=None, runtime=None, expect_sha256=None, expect_size
                 fix=["Download it again; on Hugging Face the expected value is the LFS 'oid sha256' of the file."])
 
     # What the filename claims, checked against what the chip can do.
-    findings.extend(check_claims(claimed, board=board, runtime=runtime))
+    findings.extend(check_claims(claimed, board=board, runtime=runtime,
+                                 family=family_for_name(name or path)))
     return findings
 
 

@@ -14,6 +14,7 @@ $ npuzoo doctor           # board, kernel, NPU driver, runtime libs — and how 
 $ npuzoo explain err.log  # paste a failing RKLLM/RKNN log, get the actual cause
 $ npuzoo inspect m.rkllm  # before copying: is it really a model, for this chip, for this runtime?
 $ npuzoo find qwen3 1.7b  # community .rkllm files on Hugging Face that fit YOUR board and runtime
+$ npuzoo support qwen3    # which RKLLM release added it (toolkit AND runtime), from Rockchip's changelog
 $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR runtime
 $ npuzoo run qwen3-1.7b   # run it on the NPU (or CPU, if that's honestly faster)
 ```
