@@ -1,0 +1,5 @@
+I rkllm: rkllm-runtime version: 1.2.1, rknpu driver version: 0.9.8, platform: RK3588
+I rkllm: loading rkllm model from ./language_model_w8a8.rkllm
+I rkllm: rkllm-toolkit version: 1.2.1, max_context_limit: 4096, npu_core_num: 3, target_platform: RK3588, model_dtype: W8A8
+RKLLM initialized successfully.
+I rkllm:  Model init time (ms)  3361.48

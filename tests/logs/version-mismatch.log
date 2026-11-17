@@ -1,0 +1,3 @@
+I rkllm: rkllm-runtime version: 1.2.2, rknpu driver version: 0.9.8, platform: RK3588
+I rkllm: rkllm-toolkit version: 1.2.1b1, max_context_limit: 16384, npu_core_num: 3, target_platform: RK3588, model_dtype: W8A8_G512
+E RKNN: [06:55:12.227] load model file error!

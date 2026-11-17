@@ -1,0 +1,6 @@
+rkllm init start
+W rkllm: Warning: Your rknpu driver version is too low, please upgrade to 0.9.6.
+I rkllm: rkllm-runtime version: 1.0.1, rknpu driver version: 0.8.2, platform: RK3588
+E RKNN: [10:48:59.683] failed to allocate handle, ret: -1, errno: 12, errstr: Cannot allocate memory
+can not create weight memory for domain1
+E rkllm: rkllm_init failed

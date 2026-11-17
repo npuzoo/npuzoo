@@ -27,6 +27,9 @@ def main(argv=None):
     run = sub.add_parser("run", help="run a pulled model")
     run.add_argument("name")
 
+    ex = sub.add_parser("explain", help="read an RKLLM/RKNN log and say what went wrong")
+    ex.add_argument("logfile", nargs="?", help="log file to read (default: stdin)")
+
     args = p.parse_args(argv)
 
     if args.cmd == "doctor":
@@ -38,6 +41,9 @@ def main(argv=None):
     if args.cmd == "list":
         from .registry import cmd_list
         return cmd_list(args.index)
+    if args.cmd == "explain":
+        from .explain import cmd_explain
+        return cmd_explain(args.logfile)
     if args.cmd == "run":
         print("npuzoo run: lands in v0.2 with the first model batch.")
         print("Meanwhile: npuzoo pull prints the exact command to run each package by hand.")
