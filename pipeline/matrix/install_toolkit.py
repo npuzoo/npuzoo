@@ -45,15 +45,18 @@ def pip(*args, env=None):
 
 def main(whl):
     torch, gptq = plan(requirements(whl))
-    pip("--upgrade", "pip", "setuptools", "wheel")
+    # RKLLM() imports pkg_resources, which newer setuptools no longer ships
+    pip("--upgrade", "pip", "wheel", "setuptools<80")
     if torch:
         pip("--index-url", CPU_INDEX, *torch)
     if gptq:
         env = dict(os.environ, BUILD_CUDA_EXT="0")
         pip("--no-build-isolation", gptq, env=env)
     # torch is already satisfied, so this resolves the rest from PyPI
-    pip("--extra-index-url", CPU_INDEX, whl)
-    out = subprocess.run([sys.executable, "-c", "from rkllm.api import RKLLM; print('import ok')"],
+    pip("--extra-index-url", CPU_INDEX, whl, "setuptools<80")
+    # construct it, not just import it: the constructor is where missing
+    # dependencies (pkg_resources) show up
+    out = subprocess.run([sys.executable, "-c", "from rkllm.api import RKLLM; RKLLM(); print('RKLLM() ok')"],
                          capture_output=True, text=True)
     print(out.stdout + out.stderr)
     return out.returncode
