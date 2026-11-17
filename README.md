@@ -59,9 +59,13 @@ your board is the part nobody tells you before a 2 GB download.
 
 ```
 $ npuzoo find qwen3 1.7b --board rk3588 --runtime 1.2.1     # (example repos)
-    REPO                               FILE                                  GB TOOLKIT  UPDATED     DL/30d
-  ✓ someone/Qwen3-1.7B-rk3588          Qwen3-1.7B-rk3588-w8a8-1.2.1.rkllm   2.3 1.2.1    2026-10-03     912
-  ? other/Qwen3-1.7B-NPU               model.rkllm                          2.1 ?        2026-09-12    4000
+  ✓ someone/Qwen3-1.7B-rk3588
+      Qwen3-1.7B-rk3588-w8a8-1.2.1.rkllm
+      2.3 GB · toolkit 1.2.1 · updated 2026-10-03 · 912 downloads/30d
+
+  ? other/Qwen3-1.7B-NPU
+      model.rkllm
+      2.1 GB · toolkit ? · updated 2026-09-12 · 4000 downloads/30d
 
   3 file(s) hidden because their names say they will not load here (--all shows them).
 

@@ -174,16 +174,25 @@ def cmd_find(query="", board=None, runtime=None, index_src=None, show_all=False,
     if not shown:
         print("  Nothing%s matches." % (" that fits" if hidden else ""))
     else:
-        print()
-        print("    %-34s %-38s %5s %-8s %-10s %7s" % ("REPO", "FILE", "GB", "TOOLKIT", "UPDATED", "DL/30d"))
-        for r in shown[:limit] if limit else shown:
-            name = os.path.basename(r["path"])
-            print("  %s %-34s %-38s %5s %-8s %-10s %7s" % (
-                MARK[r["verdict"]], r["repo"][:34], (name[:35] + "...") if len(name) > 38 else name,
-                _gb(r.get("bytes")), r["claims"]["toolkit"] or "?", r.get("updated") or "-",
-                r.get("downloads") if r.get("downloads") is not None else "-"))
-        if limit and len(shown) > limit:
-            print("  … %d more (--limit 0 shows all)" % (len(shown) - limit))
+        # one block per repo: its best file, and how many more it has
+        groups, order = {}, []
+        for r in shown:
+            if r["repo"] not in groups:
+                groups[r["repo"]] = []
+                order.append(r["repo"])
+            groups[r["repo"]].append(r)
+        cap = order[:limit] if limit else order
+        for repo in cap:
+            r, more = groups[repo][0], len(groups[repo]) - 1
+            dl = r.get("downloads")
+            print()
+            print("  %s %s" % (MARK[r["verdict"]], repo))
+            print("      %s" % r["path"])
+            print("      %s GB · toolkit %s · updated %s · %s downloads/30d%s" % (
+                _gb(r.get("bytes")), r["claims"]["toolkit"] or "?", r.get("updated") or "?",
+                dl if dl is not None else "?", ("   (+%d more file%s in this repo)" % (more, "s" if more > 1 else "")) if more else ""))
+        if limit and len(order) > limit:
+            print("\n  … %d more repos (--limit 0 shows all)" % (len(order) - limit))
     if hidden:
         print("\n  %d file(s) hidden because their names say they will not load here (--all shows them)." % len(hidden))
     if shown:
