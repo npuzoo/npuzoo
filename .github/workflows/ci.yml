@@ -15,7 +15,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        # pinned: ubuntu-latest moved to 26.04, which has no Python 3.9 build,
+        # and 3.9 is what older board images still ship
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
         python: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4
@@ -60,5 +62,19 @@ jobs:
           cp standalone/npuzoo-doctor.py /tmp/d.py
           cd /tmp
           python d.py --demo
-          printf 'E rkllm: Failed to allocate buffer for kv cache\n' | python d.py --explain | tee out.txt
+          # explain exits 1 when it finds a blocker: check the code, not just the text
+          code=0
+          printf 'E rkllm: Failed to allocate buffer for kv cache\n' | python d.py --explain > out.txt || code=$?
+          cat out.txt
+          test "$code" -eq 1
           grep -q "at least 1.2.2" out.txt
+
+      - name: inspect catches a Git LFS pointer before it reaches the board
+        run: |
+          cd /tmp
+          printf 'version https://git-lfs.github.com/spec/v1\noid sha256:%064d\nsize 4012345678\n' 0 > m-rk3588-w8a8.rkllm
+          code=0
+          python d.py --inspect m-rk3588-w8a8.rkllm --board rk3588 > out.txt || code=$?
+          cat out.txt
+          test "$code" -eq 1
+          grep -q "Git LFS pointer" out.txt
