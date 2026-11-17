@@ -1,0 +1,29 @@
+{
+ "about": "Combinations the next run converts. Edit this list and push to main to (re)run them; their results replace the old ones for the same model and toolkit in docs/conversion-matrix.md, and every other result is kept. Toolkit = rkllm-toolkit release tag without 'release-v'.",
+ "runs": [
+  {
+   "toolkit": "1.1.4",
+   "model": "Qwen/Qwen3-0.6B"
+  },
+  {
+   "toolkit": "1.1.4",
+   "model": "Qwen/Qwen3-1.7B"
+  },
+  {
+   "toolkit": "1.1.4",
+   "model": "Qwen/Qwen2.5-1.5B-Instruct"
+  },
+  {
+   "toolkit": "1.1.4",
+   "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+  },
+  {
+   "toolkit": "1.1.4",
+   "model": "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+  },
+  {
+   "toolkit": "1.1.4",
+   "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+  }
+ ]
+}

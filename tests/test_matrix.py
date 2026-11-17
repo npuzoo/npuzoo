@@ -151,3 +151,25 @@ def test_collect_flags_wrong_signature():
 
 def test_collect_nothing(tmp_path):
     assert coll.main([str(tmp_path), "--json", str(tmp_path / "j"), "--md", str(tmp_path / "m")]) == 1
+
+
+def test_extra_pins_for_old_datasets():
+    assert inst.extra_pins(["datasets==2.14.6", "torch==2.1.0"]) == ["setuptools<80", "pyarrow<15"]
+    assert inst.extra_pins(["datasets==4.1.1", "pyarrow==21.0.0"]) == ["setuptools<80"]
+    assert inst.extra_pins([]) == ["setuptools<80"]
+
+
+def test_collect_merge_keeps_other_results(tmp_path):
+    old = {"records": [_rec("A/a", "1.3.1", [{"target": "rk3588", "dtype": "w8a8", "status": "ok"}]),
+                       _rec("A/a", "1.1.4", [{"target": "rk3588", "dtype": "w8a8", "status": "fail",
+                                              "stage": "install", "error": "x"}])]}
+    prev = tmp_path / "conversion.json"
+    prev.write_text(json.dumps(old))
+    d = tmp_path / "results"
+    d.mkdir()
+    (d / "n.json").write_text(json.dumps(_rec("A/a", "1.1.4", [
+        {"target": "rk3588", "dtype": "w8a8", "status": "ok", "bytes": 1, "seconds": 60}])))
+    md = tmp_path / "m.md"
+    assert coll.main([str(d), "--merge", str(prev), "--json", str(prev), "--md", str(md)]) == 0
+    recs = json.loads(prev.read_text())["records"]
+    assert [(r["toolkit"], r["results"][0]["status"]) for r in recs] == [("1.3.1", "ok"), ("1.1.4", "ok")]

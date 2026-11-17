@@ -33,6 +33,20 @@ def load(folder):
     return records
 
 
+def merge(old, new):
+    """New records replace old ones for the same model and toolkit; the rest are kept.
+
+    A run that covers only some combinations (or is cancelled part-way) must
+    not wipe the results of the others.
+    """
+    key = lambda r: (r["model"], r.get("toolkit"))
+    merged = {key(r): r for r in old}
+    merged.update({key(r): r for r in new})
+    out = list(merged.values())
+    out.sort(key=lambda r: (r["model"].lower(), [-x for x in _vkey(r.get("toolkit"))]))
+    return out
+
+
 def columns(records):
     cols = {(x["target"], x["dtype"]) for r in records for x in r["results"]}
     return sorted(cols, key=lambda c: (TARGET_ORDER.index(c[0]) if c[0] in TARGET_ORDER else 99, c[1]))
@@ -107,8 +121,12 @@ def main(argv=None):
     ap.add_argument("folder")
     ap.add_argument("--json", default="matrix/conversion.json")
     ap.add_argument("--md", default="docs/conversion-matrix.md")
+    ap.add_argument("--merge", help="existing conversion.json to keep results from")
     a = ap.parse_args(argv)
     records = load(a.folder)
+    if records and a.merge and os.path.exists(a.merge):
+        with open(a.merge, encoding="utf-8") as f:
+            records = merge(json.load(f).get("records", []), records)
     if not records:
         print("no results found in %s" % a.folder, file=sys.stderr)
         return 1
