@@ -31,58 +31,17 @@ import subprocess
 import sys
 import time
 
-CORES = {"rk3588": 3, "rk3576": 2, "rk3562": 1, "rv1126b": 1}
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 PROGRESS = re.compile(r"^\s*\[[=> ]*\]\s*\d+/\d+")   # the toolkit's "[====>   ] 301/597 (50%)" bars
 EXC = re.compile(r"^(?:[\w.]+\.)?(\w*(?:Error|Exception|Exit))\b:?\s*(.*)$")
 
-# Calibration prompts: our own, neutral, half English and half Chinese, the
-# mix of tasks the official example uses (QA, maths, code, translation).
-PROMPTS = [
-    "What is the difference between a CPU, a GPU and an NPU? Answer in two sentences.",
-    "请用三句话介绍一下长江。",
-    "Write a Python function that returns the n-th Fibonacci number.",
-    "一个水池有两个进水管，甲管单独注满需要 6 小时，乙管需要 3 小时。两管同时开，几小时注满？",
-    "Translate into Chinese: The board has 16 GB of memory and an NPU with three cores.",
-    "把这句话翻译成英文：今天下午三点在会议室开项目周会。",
-    "List three things to check when a program runs out of memory.",
-    "解释一下什么是量化，以及它为什么能让模型在小设备上运行。",
-]
+# How each toolkit release wants chip, dtype and algorithm spelled, which
+# arguments its functions take, and the calibration prompts: shared with
+# `npuzoo convert`, so the matrix tests exactly what the command does.
+from npuzoo.convert import CORES, PROMPTS, ver, platform_args, algorithm_for, fit  # noqa: E402
 
 
 # ------------------------------------------------------------ helpers
-
-def ver(s):
-    m = re.match(r"(\d+)\.(\d+)\.(\d+)", s or "")
-    return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
-
-
-def platform_args(toolkit, target, dtype):
-    """Spell target and dtype the way that toolkit's own example does."""
-    if ver(toolkit) >= (1, 2, 0):
-        return target.upper(), dtype.upper()
-    return target.lower(), dtype.lower()
-
-
-def algorithm_for(toolkit, dtype):
-    # The 1.2+ examples recommend 'grq' for w4a16; earlier releases had only 'normal'.
-    if dtype.lower().startswith("w4a16") and ver(toolkit) >= (1, 2, 0):
-        return "grq"
-    return "normal"
-
-
-def fit(fn, kwargs):
-    """Only the keyword arguments this toolkit version's function accepts."""
-    try:
-        sig = inspect.signature(fn)
-    except (TypeError, ValueError):
-        return kwargs, []
-    params = sig.parameters
-    if any(p.kind == p.VAR_KEYWORD for p in params.values()):
-        return kwargs, []
-    keep = {k: v for k, v in kwargs.items() if k in params}
-    return keep, sorted(set(kwargs) - set(keep))
-
 
 def parse_child(text):
     """Stage reached, peak RSS (KB), ok flag, last exception line, tail."""
