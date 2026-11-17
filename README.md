@@ -54,6 +54,17 @@ Adding a model = submitting one YAML file. The pipeline converts, benchmarks
 on real boards, and publishes with your name on it. See `docs/CONTRIBUTING.md`
 (soon).
 
+## Community
+
+Run `npuzoo doctor` on your board and paste the output — especially when
+something is broken. Every failure mode we see makes the tool better for the
+next person.
+
+- [Discussions](https://github.com/npuzoo/npuzoo/discussions) — questions, board reports, ideas
+- [Discord](https://discord.gg/vStcJ23Tb) — `#help` for board problems, `#benchmarks` for numbers
+- [Hugging Face](https://huggingface.co/npuzoo) — the model packages
+- [@npuzoo](https://x.com/npuzoo) — release notes
+
 ## License
 
 Apache-2.0. Model weights keep their original licenses — each package's model
