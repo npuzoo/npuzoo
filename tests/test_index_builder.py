@@ -134,3 +134,15 @@ def test_modelscope_failure_keeps_huggingface(monkeypatch):
 
 def test_modelscope_page_size_is_within_the_api_limit():
     assert bci.MS_PAGE <= 50
+
+
+def test_modelscope_request_failures_are_skipped(monkeypatch):
+    import http.client
+    calls = []
+
+    def flaky(url, tries=6):
+        calls.append(url)
+        raise http.client.IncompleteRead(b"partial", 100)
+    monkeypatch.setattr(bci, "_get", flaky)
+    assert bci._ms_get("https://modelscope.example/api/v1/models/x/repo/files") is None
+    assert len(calls) == 1

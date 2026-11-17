@@ -16,6 +16,7 @@ Standard library only. Runs weekly in .github/workflows/community-index.yml.
 Set HF_ENDPOINT to use a mirror, HF_TOKEN to raise the rate limit.
 """
 import argparse
+import http.client
 import json
 import os
 import re
@@ -61,7 +62,8 @@ def _get(url, tries=6):
             if e.code in (401, 403, 404):
                 return None, None          # private, gated-without-token, or deleted since listing
             raise
-        except (urllib.error.URLError, TimeoutError) as e:
+        except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException) as e:
+            # HTTPException covers a body cut off mid-read (IncompleteRead), seen on ModelScope
             if attempt < tries - 1:
                 time.sleep(delay)
                 delay = min(delay * 2, 120)
@@ -151,7 +153,9 @@ def files_from_detail(model, detail):
 # deliberately tolerant.
 
 MS_ENDPOINT = os.environ.get("MODELSCOPE_ENDPOINT", "https://www.modelscope.cn").rstrip("/")
-MS_TERMS = ["rkllm", "rk3588", "rk3576", "rk3562", "rv1126", "rknn", "rockchip", "npu"]
+# "npu" alone matched 900+ repos, nearly all for other vendors' NPUs: four times the requests for
+# almost nothing, so it is left out.
+MS_TERMS = ["rkllm", "rk3588", "rk3576", "rk3562", "rv1126", "rknn", "rockchip"]
 MS_PAGE = 50          # the OpenAPI refuses larger pages (modelscope_hub caps at 50)
 
 
@@ -241,10 +245,10 @@ def ms_entries(item, files):
 _ms_errors = []
 
 
-def _ms_get(url):
-    """A ModelScope GET that logs and skips a refused request instead of ending the run."""
+def _ms_get(url, tries=4):
+    """A ModelScope GET that logs and skips a failed request instead of ending the run."""
     try:
-        data, _ = _get(url)
+        data, _ = _get(url, tries=tries)
         return data
     except urllib.error.HTTPError as e:
         if len(_ms_errors) < 5:
@@ -254,6 +258,11 @@ def _ms_get(url):
                 body = ""
             print("  modelscope %s on %s: %s" % (e.code, url[:120], body), file=sys.stderr)
         _ms_errors.append(e.code)
+        return None
+    except Exception as e:          # a cut-off body, a reset connection, a page that is not JSON
+        if len(_ms_errors) < 5:
+            print("  modelscope %s on %s: %s" % (type(e).__name__, url[:120], e), file=sys.stderr)
+        _ms_errors.append(type(e).__name__)
         return None
 
 
