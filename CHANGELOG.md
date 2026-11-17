@@ -18,7 +18,9 @@ Everything here works without a board except where it says otherwise.
   Python, dependency pins, `pkg_resources`, pyarrow, memory.
 - `npuzoo run`, `npuzoo serve`, `npuzoo bench` — chat, a server that speaks
   both the OpenAI and the Ollama API (so Home Assistant's Ollama integration
-  and Open WebUI connect as they would to Ollama), and a fixed benchmark, through a ctypes binding to librkllmrt for
+  and Open WebUI connect as they would to Ollama; tool calls, so Home
+  Assistant can control the house; reasoning returned apart from the
+  answer — see `docs/home-assistant.md`), and a fixed benchmark, through a ctypes binding to librkllmrt for
   runtimes 1.2.1–1.3.1. Struct layouts are checked against Rockchip's headers
   for aarch64 in CI. **Not yet run on a board.**
 - `explain` — 25 failure signatures, including two toolkit install failures

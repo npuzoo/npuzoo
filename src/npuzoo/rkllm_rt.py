@@ -392,6 +392,22 @@ class Session(object):
         fn.restype = ctypes.c_int
         return fn(self.handle, system_prompt.encode("utf-8"), prefix.encode("utf-8"), postfix.encode("utf-8"))
 
+    def set_function_tools(self, system_prompt, tools_json, tool_response_str="tool_response"):
+        """Runtime 1.2.1+: the runtime renders the tools (a JSON list) into the model's own chat
+        template, after the system prompt. Calls come back as text in the model's format."""
+        fn = getattr(self.lib, "rkllm_set_function_tools", None)
+        if fn is None:
+            raise RuntimeError_("this librkllmrt has no rkllm_set_function_tools (added in RKLLM 1.2.1)")
+        fn.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        fn.restype = ctypes.c_int
+        # keep the bytes alive with the session, in case the runtime holds on to the pointers
+        self._tools_args = (system_prompt.encode("utf-8"), tools_json.encode("utf-8"),
+                            tool_response_str.encode("utf-8"))
+        ret = fn(self.handle, *self._tools_args)
+        if ret != 0:
+            raise RuntimeError_("rkllm_set_function_tools returned %s" % ret)
+        return ret
+
     def abort(self):
         self.lib.rkllm_abort.argtypes = [ctypes.c_void_p]
         return self.lib.rkllm_abort(self.handle)

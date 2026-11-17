@@ -64,6 +64,10 @@ python tools/build_standalone.py   # 改了 src 之后重新生成单文件版
 ## 板子到手那天
 
 0. 先验证 `npuzoo run`：`npuzoo run some.rkllm -p "你好"`，看能否加载、出字、打印速度；再起 `npuzoo serve`，用 curl 调 /v1/chat/completions 和 /api/chat；最后在 Home Assistant 里添加 Ollama 集成，地址填 http://板子IP:8080，看能否对话。
+   工具调用要专门验证三件事（都只按瑞芯微 server demo 的用法写的，没上板验证过）：
+   a) 打开 HA 的「控制 Home Assistant」，说「打开厨房灯」，看模型输出的 <tool_call> 能否被解析、HA 能否执行；
+   b) 工具结果以 role="tool"、内容为 JSON 数组送回运行时后，模型能否接着回答；
+   c) 关掉工具后再开新对话，npuzoo 会调 rkllm_set_function_tools(handle, "", "[]", "tool_response") 清掉工具，确认模型不再输出 <tool_call>。如果不行，改 runner.py 的 run_turn。
    这两条命令只在桌面上用假运行时测过，结构体布局用 clang 对官方头文件核过，真机上第一次跑最可能出问题的是 CPU 核掩码和 embed_flash 的默认值。
 
 1. 官方 Debian 镜像跑 `sudo python3 standalone/npuzoo-doctor.py`，存输出

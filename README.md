@@ -124,11 +124,11 @@ without a source.
 | `npuzoo doctor` (RK3588/RK3576/RK3562/RV1126B) | v0.1 — works now, calibrating against real boards |
 | `npuzoo explain` (log → diagnosis) | v0.1 — 25 failure signatures; 9 real logs as regression fixtures (2 from our own conversion runs) |
 | `npuzoo inspect` (model file → can it load?) | v0.1 — LFS pointers, error pages, GGUF, third-party `.rkllm`, wrong chip or format, version order, checksum. See [docs/rkllm-format.md](docs/rkllm-format.md) |
-| `npuzoo find` / `npuzoo get` (community files) | v0.1 — weekly index of every public `.rkllm` on Hugging Face; fit judged from names, downloads verified |
+| `npuzoo find` / `npuzoo get` (community files) | v0.1 — weekly index of every public `.rkllm` on Hugging Face and ModelScope; fit judged from names, downloads verified |
 | runtime dating from a version-less log | v0.1 — 89 fingerprints across 12 releases |
 | standalone one-file doctor | v0.1 — works now; includes `--explain`, `--inspect` and `--pc` |
 | registry format + `npuzoo pull` | v0.1 — local/file index works, hosted registry WIP |
-| `npuzoo run` / `npuzoo serve` (RKLLM runtime 1.2.1–1.3.1) | v0.2 — written against Rockchip's headers; every struct size and offset checked in CI for aarch64 (`tools/check_rkllm_abi.py`); **not yet run on a board** |
+| `npuzoo run` / `serve` / `bench` (RKLLM runtime 1.2.1–1.3.1) | v0.2 — written against Rockchip's headers; every struct size and offset checked in CI for aarch64 (`tools/check_rkllm_abi.py`); `serve` speaks the OpenAI and Ollama APIs with tool calls ([Home Assistant, Open WebUI](docs/home-assistant.md)); **not yet run on a board** |
 | conversion matrix (x86, no board) | runs in GitHub Actions: six models × toolkit 1.1.4 / 1.2.3 / 1.3.1 × RK3588 / RK3576 formats → [docs/conversion-matrix.md](docs/conversion-matrix.md) |
 | voice pipeline preset | planned |
 

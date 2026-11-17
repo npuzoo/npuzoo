@@ -22,7 +22,7 @@ $ npuzoo serve m.rkllm    # 提供 OpenAI 和 Ollama 兼容接口（:8080），H
 $ npuzoo bench m.rkllm    # 每块板子都跑同样两组测试，生成可以分享的测速 JSON
 ```
 
-`run` 和 `serve` 支持 RKLLM 运行时 1.2.1–1.3.1，按瑞芯微官方头文件编写，结构体布局在 CI 里逐项核对过；**还没有在真板子上跑过**，欢迎反馈。
+`run` 和 `serve` 支持 RKLLM 运行时 1.2.1–1.3.1，按瑞芯微官方头文件编写，结构体布局在 CI 里逐项核对过；**还没有在真板子上跑过**，欢迎反馈。`serve` 同时兼容 OpenAI 和 Ollama 接口，支持工具调用（Home Assistant 控制家居要用到）和思考内容分离，接入方法见 [docs/home-assistant.md](docs/home-assistant.md)。
 
 ## 不用安装，现在就体检
 

@@ -7,6 +7,7 @@ checks those objects' layouts against Rockchip's headers.
 import ctypes
 import json
 import threading
+import urllib.error
 import urllib.request
 
 import pytest
@@ -32,6 +33,12 @@ class FakeLib(object):
         self.rkllm_clear_kv_cache = FakeFn(lambda *a: self.calls.append(("clear", a[1])) or 0)
         self.rkllm_destroy = FakeFn(lambda h: self.calls.append(("destroy",)) or 0)
         self.rkllm_abort = FakeFn(lambda h: 0)
+        self.rkllm_set_function_tools = FakeFn(
+            lambda h, sp, tools, tag: self.calls.append(("tools", sp.decode(), tools.decode(), tag.decode())) or 0)
+        self.script = []        # optional: one list of chunks per run, used in order
+
+    def _chunks_for_run(self):
+        return self.script.pop(0) if self.script else self.chunks
 
     def _init(self, handle_ref, param_ref, cb):
         self.param = param_ref._obj
@@ -46,7 +53,7 @@ class FakeLib(object):
         if self.fail:
             self.cb(ctypes.pointer(rt.RKLLMResult()), None, rt.RUN_ERROR)
             return -1
-        for c in self.chunks:
+        for c in self._chunks_for_run():
             r = rt.RKLLMResult()
             r.text = c
             self.cb(ctypes.pointer(r), None, rt.RUN_NORMAL)
@@ -248,3 +255,114 @@ def test_ollama_generate(server):
     assert lib.calls[-1][1] == "Say hi" and lib.calls[-1][3] == 0       # no kept history for generate
     code, _, body = post(base + "/api/generate", {"model": "qwen3-test"})
     assert json.loads(body)["done_reason"] == "load"
+
+
+# ------------------------------------------------------------ tools and reasoning
+
+LIGHT = [{"type": "function", "function": {"name": "set_light", "description": "Switch a light",
+                                           "parameters": {"type": "object", "properties": {
+                                               "room": {"type": "string"}}}}}]
+CALL = b'<tool_call>\n{"name": "set_light", "arguments": {"room": "kitchen"}}\n</tool_call>'
+
+
+def test_conversation_with_tools_keeps_system_for_the_runtime():
+    c = Conversation()
+    p = c.plan([{"role": "system", "content": "You run a house."}, {"role": "user", "content": "Lights on"}], LIGHT)
+    assert p["reset"] and p["prompt"] == "Lights on" and p["system"] == "You run a house." and p["tools"] == LIGHT
+    c.answered(p["after"], "", [{"name": "set_light", "arguments": {"room": "kitchen"}}], p["tools_key"])
+    follow = [{"role": "system", "content": "You run a house. It is 10:02."},       # HA changes it every time
+              {"role": "user", "content": "Lights on"},
+              {"role": "assistant", "content": None, "tool_calls": [
+                  {"id": "x", "type": "function", "function": {"name": "set_light", "arguments": '{"room": "kitchen"}'}}]},
+              {"role": "tool", "tool_call_id": "x", "content": '{"success": true}'}]
+    p = c.plan(follow, LIGHT)
+    assert not p["reset"] and p["role"] == "tool" and json.loads(p["prompt"]) == [{"success": True}]
+    assert c.plan(follow, LIGHT[:0] or None)["reset"]                               # different tools: start over
+
+
+def test_conversation_tool_results_without_history_say_what_was_asked():
+    p = Conversation().plan([{"role": "user", "content": "Lights on"},
+                             {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "f"}}]},
+                             {"role": "tool", "content": "ok"}])
+    assert p["reset"] and p["role"] == "user" and p["prompt"] == 'Lights on\n\nTool results: ["ok"]'
+
+
+def test_openai_tool_call_round_trip(server):
+    base, lib = server
+    lib.script = [[b"Sure. ", CALL], [b"The kitchen light is on."]]
+    msgs = [{"role": "system", "content": "You run a house."}, {"role": "user", "content": "Kitchen light on"}]
+    code, headers, body = post(base + "/v1/chat/completions", {"messages": msgs, "tools": LIGHT})
+    out = json.loads(body)["choices"][0]
+    assert out["finish_reason"] == "tool_calls" and out["message"]["content"] == "Sure."
+    call = out["message"]["tool_calls"][0]
+    assert call["function"]["name"] == "set_light" and json.loads(call["function"]["arguments"]) == {"room": "kitchen"}
+    assert ("tools", "You run a house.", json.dumps(LIGHT), "tool_response") in lib.calls
+    assert lib.calls[-1][1:3] == ("Kitchen light on", "user")                       # system went with the tools
+    msgs += [out["message"], {"role": "tool", "tool_call_id": call["id"], "content": '{"ok": true}'}]
+    code, headers, body = post(base + "/v1/chat/completions", {"messages": msgs, "tools": LIGHT})
+    assert headers["X-Npuzoo-History"] == "continued"
+    assert lib.calls[-1][1:4] == ('[{"ok": true}]', "tool", 1)
+    assert json.loads(body)["choices"][0]["message"]["content"] == "The kitchen light is on."
+
+
+def test_openai_streamed_tool_call(server):
+    base, lib = server
+    lib.script = [[b"On it. <tool", b"_call>\n", CALL[12:]]]
+    code, headers, body = post(base + "/v1/chat/completions", {
+        "stream": True, "tools": LIGHT, "messages": [{"role": "user", "content": "Kitchen light on"}]})
+    events = [json.loads(l[6:]) for l in body.split("\n\n") if l.startswith("data: {")]
+    deltas = [e["choices"][0]["delta"] for e in events]
+    assert "".join(d.get("content", "") for d in deltas) == "On it. "
+    calls = [d["tool_calls"] for d in deltas if "tool_calls" in d][0]
+    assert calls[0]["function"]["name"] == "set_light" and events[-1]["choices"][0]["finish_reason"] == "tool_calls"
+
+
+def test_tools_are_taken_out_again(server):
+    base, lib = server
+    lib.script = [[CALL], [b"Hi"]]
+    post(base + "/v1/chat/completions", {"tools": LIGHT, "messages": [{"role": "user", "content": "a"}]})
+    post(base + "/v1/chat/completions", {"messages": [{"role": "user", "content": "b"}]})
+    assert [c for c in lib.calls if c[0] == "tools"][-1] == ("tools", "", "[]", "tool_response")
+
+
+def test_openai_reasoning_is_separate(server):
+    base, lib = server
+    lib.script = [[b"<think>\nchecking\n</think>\n\n", b"Yes."]]
+    code, _, body = post(base + "/v1/chat/completions", {"messages": [{"role": "user", "content": "?"}],
+                                                       "enable_thinking": True})
+    msg = json.loads(body)["choices"][0]["message"]
+    assert msg["content"] == "Yes." and msg["reasoning_content"] == "checking"
+    assert lib.calls[-1][0] == "run"
+
+
+def test_ollama_tool_call_and_thinking(server):
+    base, lib = server
+    lib.script = [[b"<think>hmm</think>", CALL]]
+    code, _, body = post(base + "/api/chat", {"tools": LIGHT, "think": True,
+                                             "messages": [{"role": "user", "content": "Kitchen light on"}]})
+    lines = [json.loads(l) for l in body.splitlines() if l.strip()]
+    assert "".join(l["message"].get("thinking", "") for l in lines) == "hmm"
+    calls = [l["message"]["tool_calls"] for l in lines if l["message"].get("tool_calls")][0]
+    assert calls == [{"function": {"name": "set_light", "arguments": {"room": "kitchen"}}}] and lines[-1]["done"]
+    # reasoning that was not asked for is left out
+    lib.script = [[b"<think>hmm</think>", b"Done."]]
+    code, _, body = post(base + "/api/chat", {"stream": False, "messages": [{"role": "user", "content": "x"}]})
+    msg = json.loads(body)["message"]
+    assert msg["content"] == "Done." and "thinking" not in msg
+
+
+def test_ollama_show_capabilities(server):
+    base, _ = server
+    code, _, body = post(base + "/api/show", {"model": "qwen3-test"})
+    assert {"completion", "tools", "thinking"} <= set(json.loads(body)["capabilities"])
+
+
+def test_head_and_pull(server):
+    base, _ = server
+    req = urllib.request.Request(base + "/", method="HEAD")
+    with urllib.request.urlopen(req, timeout=10) as r:
+        assert r.status == 200
+    assert json.loads(post(base + "/api/pull", {"model": "qwen3-test:latest"})[2])["status"] == "success"
+    with pytest.raises(urllib.error.HTTPError) as e:
+        post(base + "/api/pull", {"model": "llama3.2"})
+    assert e.value.code == 404
