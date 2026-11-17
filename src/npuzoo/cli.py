@@ -53,6 +53,15 @@ def _main(argv=None):
     run.add_argument("--json", action="store_true", help="answer and timings as JSON")
     model_opts(run)
 
+    cv = sub.add_parser("convert", help="convert a Hugging Face model to .rkllm on this x86 PC (rkllm-toolkit)")
+    cv.add_argument("model", help="Hugging Face repo id (Qwen/Qwen3-1.7B) or a local model directory")
+    cv.add_argument("--chip", required=True, help="rk3588, rk3588s, rk3576, rk3562 or rv1126b")
+    cv.add_argument("--dtype", help="weight format (default w8a8; w4a16_g128 makes a smaller file for rk3576)")
+    cv.add_argument("--out", default=".", help="directory for the .rkllm file (default: here)")
+    cv.add_argument("--context", type=int, default=4096, help="max context the model is built for (default 4096)")
+    cv.add_argument("--no-calibration", action="store_true", help="skip the calibration set (faster, may lose quality)")
+    cv.add_argument("--force", action="store_true", help="convert even if the checks say it will fail")
+
     bn = sub.add_parser("bench", help="measure a .rkllm model the same way on every board; writes a shareable JSON")
     bn.add_argument("name", help="a .rkllm file, or a pulled package name")
     bn.add_argument("--repeats", type=int, default=3, help="measured runs per workload (default 3)")
@@ -142,6 +151,10 @@ def _main(argv=None):
         return cmd_run(args.name, prompt=args.prompt, lib_path=args.lib, force=args.force, context=args.context,
                        max_new_tokens=args.max_new_tokens, temperature=args.temperature, think=args.think,
                        as_json=args.json)
+    if args.cmd == "convert":
+        from .convert import cmd_convert
+        return cmd_convert(args.model, args.chip, dtype=args.dtype, out_dir=args.out, context=args.context,
+                           calibrate=not args.no_calibration, force=args.force)
     if args.cmd == "bench":
         from .bench import cmd_bench
         return cmd_bench(args.name, repeats=args.repeats, lib_path=args.lib, force=args.force,

@@ -22,6 +22,10 @@ $ npuzoo pull qwen3-1.7b  # a model converted & verified for YOUR board and YOUR
 $ npuzoo run m.rkllm      # chat on the NPU; prints prefill/generate tok/s from the runtime itself
 $ npuzoo serve m.rkllm    # OpenAI and Ollama APIs on :8080 — Home Assistant, Open WebUI, openai clients
 $ npuzoo bench m.rkllm    # the same two workloads on every board; writes a JSON worth sharing
+
+# on the x86 PC that converts models:
+$ npuzoo doctor --pc                                  # toolkit, Python, pins, memory
+$ npuzoo convert Qwen/Qwen3-1.7B --chip rk3588        # checks, calibrates, converts, names the file
 ```
 
 `explain` can date a log that contains no version line at all. The runtime's

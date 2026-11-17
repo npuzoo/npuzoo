@@ -16,6 +16,12 @@ Everything here works without a board except where it says otherwise.
   from Rockchip's changelog. `inspect`, `find` and `explain` use the same table.
 - `npuzoo doctor --pc` — the x86 machine that converts models: toolkit,
   Python, dependency pins, `pkg_resources`, pyarrow, memory.
+- `npuzoo convert MODEL --chip rk3588` — the conversion the matrix runs, for
+  one model: refuses up front when the toolkit predates the model family or
+  memory will run out, writes a calibration set, spells chip, format and
+  algorithm the way the installed toolkit release expects, names the output
+  so `inspect` and `find` can read it, and sends a failed run's log through
+  `explain`.
 - `npuzoo run`, `npuzoo serve`, `npuzoo bench` — chat, a server that speaks
   both the OpenAI and the Ollama API (so Home Assistant's Ollama integration
   and Open WebUI connect as they would to Ollama; tool calls, so Home
