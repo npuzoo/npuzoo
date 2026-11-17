@@ -35,6 +35,8 @@ jobs:
 
   convert:
     needs: plan
+    # an empty plan means "nothing to run": skip instead of failing on an empty matrix
+    if: needs.plan.outputs.include != '[]'
     name: ${{ matrix.toolkit }} · ${{ matrix.model }}
     runs-on: ubuntu-24.04
     timeout-minutes: 330
@@ -100,7 +102,7 @@ jobs:
 
   collect:
     needs: [plan, convert]
-    if: always()
+    if: always() && needs.plan.outputs.include != '[]'
     runs-on: ubuntu-24.04
     permissions:
       contents: write

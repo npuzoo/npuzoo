@@ -1,30 +1,38 @@
 {
- "about": "Combinations the next run converts. Edit this list and push to main to (re)run them; their results replace the old ones for the same model and toolkit in docs/conversion-matrix.md, and every other result is kept. Toolkit = rkllm-toolkit release tag without 'release-v'. also_collect_run_id: results of that earlier run (its uploaded artifacts) are merged in too; null for none.",
+ "about": "Combinations the next run converts. Edit this list and push to main to (re)run them (an empty list runs nothing); their results replace the old ones for the same model and toolkit in docs/conversion-matrix.md, and every other result is kept. Toolkit = rkllm-toolkit release tag without 'release-v'. also_collect_run_id: results of that earlier run (its uploaded artifacts) are merged in too; null for none.",
  "runs": [
   {
-   "toolkit": "1.1.4",
-   "model": "Qwen/Qwen3-0.6B"
+   "toolkit": "1.2.3",
+   "model": "Qwen/Qwen3.5-0.8B"
   },
   {
-   "toolkit": "1.1.4",
-   "model": "Qwen/Qwen3-1.7B"
+   "toolkit": "1.3.1",
+   "model": "Qwen/Qwen3.5-0.8B"
   },
   {
-   "toolkit": "1.1.4",
-   "model": "Qwen/Qwen2.5-1.5B-Instruct"
+   "toolkit": "1.2.3",
+   "model": "openbmb/MiniCPM4-0.5B"
   },
   {
-   "toolkit": "1.1.4",
-   "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+   "toolkit": "1.3.1",
+   "model": "openbmb/MiniCPM4-0.5B"
   },
   {
-   "toolkit": "1.1.4",
-   "model": "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+   "toolkit": "1.2.3",
+   "model": "unsloth/gemma-3-1b-it"
   },
   {
-   "toolkit": "1.1.4",
-   "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+   "toolkit": "1.3.1",
+   "model": "unsloth/gemma-3-1b-it"
+  },
+  {
+   "toolkit": "1.2.3",
+   "model": "internlm/internlm2-chat-1_8b"
+  },
+  {
+   "toolkit": "1.3.1",
+   "model": "internlm/internlm2-chat-1_8b"
   }
  ],
- "also_collect_run_id": 44103468844
+ "also_collect_run_id": null
 }
